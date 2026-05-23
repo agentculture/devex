@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.21.0] - 2026-05-23
 
+### Removed
+
+- **Retired the Jekyll docs site and its Cloudflare Pages deploy.** The
+  public site is now owned by the sibling `agentculture/katvan` (technical
+  writer + SEO agent), so agex-cli no longer builds or deploys one. Removed
+  `.github/workflows/docs.yml`, `scripts/sync_skill_md.py`, and the Jekyll
+  scaffolding under `docs/` (`_config.yml`, `Gemfile`, `_includes/`,
+  `_sass/`, `assets/`, `index.md`, `getting-started.md`, `404.md`,
+  `commands/`). `docs/` now holds only the maintainer-facing technical docs:
+  `superpowers/` (specs + plans) and `skill-sources.md`.
+
 ### Added
 
 - **Vendored the `cicd` skill** at `.claude/skills/cicd/`, finishing the

@@ -85,7 +85,6 @@ uv run pytest --cov=src/agent_experience --cov-report=xml --cov-report=term
 
 - `.github/workflows/test.yml` — matrix: 3 OS × 4 Python (3.10–3.13) running `uv run pytest`. Also runs a `version-check` job on PRs that fails (with a sticky `<!-- version-check -->` comment) when `pyproject.toml`'s version on the PR matches the one on `main` and any code file under `src/` / `tests/` / `pyproject.toml` changed. Docs-only PRs skip the check.
 - `.github/workflows/publish.yml` — builds sdist + wheel. PRs publish a per-PR dev version to TestPyPI (sticky install-command comment); pushes to `main` publish the stable version to TestPyPI (canary), then an `autotag` job pushes `v<version>` if missing, which gates the inline `publish-pypi` + `github-release` jobs. No manual tagging — bumping `pyproject.toml` is the release signal.
-- `.github/workflows/docs.yml` — builds the Jekyll docs site and deploys to Cloudflare Pages (per-PR preview + production on main).
 - SonarCloud is configured as **Automatic Analysis** on the repo (no CI workflow). Coverage and quality are read by SonarCloud directly.
 - All third-party actions are **pinned to full commit SHAs** with trailing `# vN` comments (rule `githubactions:S7637`). Keep new actions pinned the same way.
 
