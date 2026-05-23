@@ -5,6 +5,12 @@ Every call shells `gh ...` and parses JSON.  Hard failures raise
 (missing SonarCloud project, missing PR for branch) return ``None``
 or ``[]`` so renders still succeed.
 
+The SonarCloud helpers go one step further: a *transient* failure
+(timeout, 5xx, rate-limit, auth, or a non-JSON body) must not abort the
+whole `pr read` / `pr await` — the gate fetch degrades to a ``SKIPPED``
+sentinel (distinct from ``None`` "not registered") so the briefing can
+say "couldn't evaluate" rather than crashing.
+
 When the future zero-trust httpx swap lands, only this module changes.
 """
 
@@ -268,9 +274,21 @@ def pr_review_threads(pr: int) -> list[dict[str, Any]]:
 
 _SONAR_HOST_ARGS = ["--hostname", "sonarcloud.io"]
 
+# Synthetic gate returned when SonarCloud is reachable-but-unhappy (transient
+# network/HTTP failure or a non-JSON body).  Distinct from ``None`` (404 / not
+# registered) so the briefing and the `await` gate can tell "couldn't check"
+# apart from "no project".  ``SKIPPED`` is treated as non-blocking by the gate.
+SONAR_GATE_SKIPPED: dict[str, Any] = {"projectStatus": {"status": "SKIPPED"}}
+
 
 def sonar_quality_gate(project_key: str, pr: int) -> dict[str, Any] | None:
-    """Query SonarCloud for PR quality gate status; return None if project not found."""
+    """Query SonarCloud for PR quality gate status.
+
+    Returns ``None`` when the project is not registered (404).  On any other
+    transient failure (timeout, 5xx, rate-limit, auth) or a non-JSON body,
+    degrades to ``SONAR_GATE_SKIPPED`` instead of raising, so a SonarCloud blip
+    never aborts `pr read` / `pr await`.
+    """
     args = [
         "api",
         *_SONAR_HOST_ARGS,
@@ -283,12 +301,21 @@ def sonar_quality_gate(project_key: str, pr: int) -> dict[str, Any] | None:
     except RuntimeError as exc:
         if "404" in str(exc):
             return None
-        raise
-    return json.loads(out)
+        return SONAR_GATE_SKIPPED
+    try:
+        return json.loads(out)
+    except json.JSONDecodeError:
+        return SONAR_GATE_SKIPPED
 
 
 def sonar_new_issues(project_key: str, pr: int) -> list[dict[str, Any]]:
-    """Query SonarCloud for new issues in the PR; return [] if project not found."""
+    """Query SonarCloud for new issues in the PR.
+
+    Returns ``[]`` when the project is not registered (404) and, defensively,
+    on any other transient failure or non-JSON body — the issues list is
+    enrichment, so an unreachable SonarCloud degrades to empty rather than
+    aborting the briefing.
+    """
     args = [
         "api",
         *_SONAR_HOST_ARGS,
@@ -298,9 +325,10 @@ def sonar_new_issues(project_key: str, pr: int) -> list[dict[str, Any]]:
     ]
     try:
         out = _run_gh(args)
-    except RuntimeError as exc:
-        if "404" in str(exc):
-            return []
-        raise
-    data = json.loads(out)
+    except RuntimeError:
+        return []
+    try:
+        data = json.loads(out)
+    except json.JSONDecodeError:
+        return []
     return list(data.get("issues", []))

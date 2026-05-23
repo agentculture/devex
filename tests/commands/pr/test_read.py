@@ -39,6 +39,23 @@ def test_pr_read_one_shot_renders_briefing(monkeypatch, tmp_path, capsys):
     assert "Wait for human merge" in captured.out
 
 
+def test_pr_read_renders_skipped_gate_on_transient_failure(monkeypatch, tmp_path, capsys):
+    """A transient SonarCloud failure surfaces as SKIPPED, not a crash.
+
+    Regression for steward#31: read shares the Sonar fetch with await, so the
+    ``SONAR_GATE_SKIPPED`` sentinel must render a clear notice and read must
+    still exit 0.
+    """
+    monkeypatch.chdir(tmp_path)
+    _setup_clean(monkeypatch)
+    monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: github.SONAR_GATE_SKIPPED)
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0, captured.out + captured.err
+    assert "SKIPPED" in captured.out
+    assert "SonarCloud unreachable" in captured.out
+
+
 def test_pr_read_with_failing_check(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup_clean(
