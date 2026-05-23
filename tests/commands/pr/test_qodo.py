@@ -64,3 +64,19 @@ def test_never_raises_on_garbage():
     )
     assert isinstance(result, dict)
     assert result["total"] == 0
+
+
+def test_found_comment_not_masked_when_subparser_raises(monkeypatch):
+    """A parsing failure must not collapse a present Qodo comment to None
+    (which the template would render as "_No Qodo review found._").  Counts
+    still parse, so the collapsed-findings warning can still fire."""
+
+    def boom(_body):
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr(_qodo, "parse_findings", boom)
+    result = _qodo.parse([_qodo_comment()])
+    assert result is not None
+    assert result["findings"] == []
+    assert result["counts"]["bugs"] == 2  # counts survive a findings failure
+    assert result["total"] == 3

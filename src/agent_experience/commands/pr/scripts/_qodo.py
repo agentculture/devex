@@ -122,17 +122,26 @@ def parse_findings(body: str) -> list[dict[str, Any]]:
 
 def parse(comments: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Return ``{counts, total, findings, url}`` for the Qodo summary comment,
-    or ``None`` when no such comment is present.  Never raises.
+    or ``None`` *only* when no such comment is present.
+
+    Once a Qodo comment is found this always returns a dict (with safe
+    defaults), so a parsing hiccup degrades to "0 findings" / the collapsed
+    warning rather than the misleading ``_No Qodo review found._``.  ``counts``
+    and ``findings`` are parsed independently so a partial failure still
+    surfaces whatever was recoverable.  Never raises.
     """
-    try:
-        comment = _find_qodo_comment(comments)
-        if comment is None:
-            return None
-        body = comment.get("body") or ""
-        counts = parse_counts(body)
-        findings = parse_findings(body)
-        total = counts["bugs"] + counts["rule_violations"] + counts["requirement_gaps"]
-        url = comment.get("html_url") or next((f["link"] for f in findings if f.get("link")), None)
-        return {"counts": counts, "total": total, "findings": findings, "url": url}
-    except Exception:  # pragma: no cover - defensive: parsing must never break read
+    comment = _find_qodo_comment(comments)
+    if comment is None:
         return None
+    body = comment.get("body") or ""
+    try:
+        counts = parse_counts(body)
+    except Exception:  # pragma: no cover - defensive
+        counts = {"bugs": 0, "rule_violations": 0, "requirement_gaps": 0}
+    try:
+        findings = parse_findings(body)
+    except Exception:  # pragma: no cover - defensive
+        findings = []
+    total = counts["bugs"] + counts["rule_violations"] + counts["requirement_gaps"]
+    url = comment.get("html_url") or next((f["link"] for f in findings if f.get("link")), None)
+    return {"counts": counts, "total": total, "findings": findings, "url": url}
