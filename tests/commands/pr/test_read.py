@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from agent_experience.cli import app
@@ -5,6 +7,8 @@ from agent_experience.commands.pr.scripts import _journal
 from agent_experience.core import github
 
 runner = CliRunner()
+
+_QODO_FIXTURE = Path(__file__).parent / "fixtures" / "gh" / "qodo_summary_comment.html"
 
 
 def _setup_clean(monkeypatch, *, comments=None, checks=None):
@@ -66,6 +70,53 @@ def test_pr_read_with_comments_emits_table(monkeypatch, tmp_path):
     result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
     assert "src/foo.py:12" in result.stdout
     assert "qodo" in result.stdout
+
+
+def test_pr_read_surfaces_qodo_findings(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    _setup_clean(
+        monkeypatch,
+        comments=[
+            {
+                "type": "top-level",
+                "id": 7,
+                "author": "qodo-code-review[bot]",
+                "html_url": "https://github.com/owner/repo/pull/42#issuecomment-7",
+                "body": _QODO_FIXTURE.read_text(encoding="utf-8"),
+            }
+        ],
+    )
+    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
+    assert result.exit_code == 0
+    assert "## Qodo review" in result.stdout
+    assert "Orphan honesty" in result.stdout
+    assert "src/agent_experience/core/render.py:42-55" in result.stdout
+
+
+def test_pr_read_flags_collapsed_qodo_when_no_findings(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    body = (
+        "<h3>Code Review by Qodo</h3>\n"
+        "<code>🐞 Bugs (3)</code>  <code>📘 Rule violations (0)</code>  "
+        "<code>📎 Requirement gaps (0)</code>\n"
+    )
+    _setup_clean(
+        monkeypatch,
+        comments=[
+            {
+                "type": "top-level",
+                "id": 7,
+                "author": "qodo-code-review[bot]",
+                "html_url": "https://github.com/owner/repo/pull/42#issuecomment-7",
+                "body": body,
+            }
+        ],
+    )
+    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
+    assert result.exit_code == 0
+    assert "⚠️" in result.stdout
+    assert "3 finding(s) in collapsed Qodo review block" in result.stdout
+    assert "expand on GitHub" in result.stdout
 
 
 def test_pr_read_writes_journal_event(monkeypatch, tmp_path):

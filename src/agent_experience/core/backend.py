@@ -11,12 +11,22 @@ class Backend(str, Enum):
     ACP = "acp"
 
 
+# Accepted aliases that are not enum values themselves.  The AgentCulture
+# standard culture.yaml uses `backend: claude`, so map it onto claude-code.
+_ALIASES = {"claude": Backend.CLAUDE_CODE}
+
+# Human-facing list of accepted values, shared by every error message so
+# they never drift.  Aliases are shown next to their canonical value.
+_VALID_DISPLAY = "claude (= claude-code), codex, copilot, acp"
+
+
 def parse_backend(value: str) -> Backend:
+    if value in _ALIASES:
+        return _ALIASES[value]
     try:
         return Backend(value)
     except ValueError:
-        valid = ", ".join(b.value for b in Backend)
-        raise ValueError(f"unknown backend '{value}' (one of: {valid})") from None
+        raise ValueError(f"unknown backend '{value}' (one of: {_VALID_DISPLAY})") from None
 
 
 def resolve_backend(arg: str | None, project_dir: Path) -> Backend:
@@ -35,9 +45,16 @@ def resolve_backend(arg: str | None, project_dir: Path) -> Backend:
         if agents and isinstance(agents[0], dict):
             backend_value = agents[0].get("backend")
             if backend_value:
-                return parse_backend(backend_value)
-    valid = ", ".join(b.value for b in Backend)
+                try:
+                    return parse_backend(backend_value)
+                except ValueError:
+                    suffix = agents[0].get("suffix") or "?"
+                    raise ValueError(
+                        f"culture.yaml agent '{suffix}' has unknown backend "
+                        f"'{backend_value}'\n"
+                        f"hint: expected one of {_VALID_DISPLAY}"
+                    ) from None
     raise ValueError(
-        f"--agent required (one of: {valid}) or set 'backend:' on the "
+        f"--agent required (one of: {_VALID_DISPLAY}) or set 'backend:' on the "
         f"first agent in culture.yaml"
     )

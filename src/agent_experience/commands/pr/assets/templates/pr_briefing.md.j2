@@ -42,6 +42,22 @@ _No comments yet._
 {% endfor %}
 {%- endif %}
 
+## Qodo review
+
+{% if not qodo -%}
+_No Qodo review found._
+{%- else -%}
+🐞 Bugs: **{{ qodo.counts.bugs }}** · 📘 Rule violations: **{{ qodo.counts.rule_violations }}** · 📎 Requirement gaps: **{{ qodo.counts.requirement_gaps }}**
+{% if qodo.findings -%}
+{% for f in qodo.findings -%}
+- {{ f.title or "(untitled finding)" }}{% if f.path %} — `{{ f.path }}{% if f.line %}:{{ f.line }}{% endif %}`{% endif %}{% if f.link %} ([link]({{ f.link }})){% endif %}
+{% endfor %}
+{%- endif %}
+{% if qodo.total > 0 and not qodo.findings -%}
+> ⚠️ {{ qodo.total }} finding(s) in collapsed Qodo review block — expand on GitHub{% if qodo.url %} {{ qodo.url }}{% endif %}
+{%- endif %}
+{%- endif %}
+
 ## Readiness
 
 {% if waiting_for -%}
