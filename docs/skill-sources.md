@@ -10,7 +10,7 @@ relevant `SKILL.md` frontmatter `description`.
 | Skill | Path | Upstream (canonical) | Divergence | Resync issue |
 |-------|------|----------------------|------------|--------------|
 | `communicate` | `.claude/skills/communicate/` | [`steward/.claude/skills/communicate/`](https://github.com/agentculture/steward/tree/main/.claude/skills/communicate) | Identifier-only (frontmatter `description` says "from agex-cli"). | [#36](https://github.com/agentculture/agex-cli/issues/36) |
-| `cicd` | `.claude/skills/cicd/` | [`steward/.claude/skills/cicd/`](https://github.com/agentculture/steward/tree/main/.claude/skills/cicd) | Identifier-only (frontmatter `description` says "agex-cli's CI/CD lane"). | [#37](https://github.com/agentculture/agex-cli/issues/37) |
+| `cicd` | `.claude/skills/cicd/` | [`steward/.claude/skills/cicd/`](https://github.com/agentculture/steward/tree/main/.claude/skills/cicd) | Adapted-thin: agex-cli owns `agex pr`, so `workflow.sh` delegates every verb to the native command and the steward `status`/`await` extensions + `_resolve-nick.sh` / `pr-reply.sh` / `portability-lint.sh` helpers are dropped (only `workflow.sh` remains). Remaining `pr-status.sh` extras tracked in [#52](https://github.com/agentculture/agex-cli/issues/52). | [#51](https://github.com/agentculture/agex-cli/issues/51) |
 
 ## Resync workflow
 
@@ -29,6 +29,7 @@ When an issue arrives titled "Resync vendored `<name>` skill from steward":
 
 ## Nick
 
-`culture.yaml` at the repo root sets `suffix: agex-cli`. Both
-`agtag` (used by `communicate`) and `cicd/scripts/_resolve-nick.sh`
-read that file. Auto-emitted signatures are `- agex-cli (Claude)`.
+`culture.yaml` at the repo root sets `suffix: agex-cli`. `agtag` (used
+by `communicate`) and `agex pr` (which `cicd` delegates to) both read
+that file to resolve the signing nick. Auto-emitted signatures are
+`- agex-cli (Claude)`.
