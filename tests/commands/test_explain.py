@@ -1,33 +1,31 @@
-from typer.testing import CliRunner
-
-from agent_experience.cli import app
+import agent_experience.cli as cli
 
 
-def test_explain_agex_prints_self_describing_page():
-    runner = CliRunner()
-    result = runner.invoke(app, ["explain", "agex"])
-    assert result.exit_code == 0
-    assert "agex" in result.stdout
-    assert "overview" in result.stdout
-    assert "learn" in result.stdout
+def test_explain_agex_prints_self_describing_page(capsys):
+    code = cli.main(["explain", "agex"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "agex" in captured.out
+    assert "overview" in captured.out
+    assert "learn" in captured.out
 
 
-def test_explain_explain_reads_command_skill_md():
-    runner = CliRunner()
-    result = runner.invoke(app, ["explain", "explain"])
-    assert result.exit_code == 0
-    assert "agex explain" in result.stdout.lower()
+def test_explain_explain_reads_command_skill_md(capsys):
+    code = cli.main(["explain", "explain"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "agex explain" in captured.out.lower()
 
 
-def test_explain_unknown_topic_exits_2_with_menu():
-    runner = CliRunner()
-    result = runner.invoke(app, ["explain", "unknown-topic-xyz"])
-    assert result.exit_code == 2
-    assert "unknown" in result.stderr.lower()
+def test_explain_unknown_topic_exits_2_with_menu(capsys):
+    code = cli.main(["explain", "unknown-topic-xyz"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "unknown" in captured.err.lower()
 
 
-def test_explain_rejects_path_traversal():
-    runner = CliRunner()
+def test_explain_rejects_path_traversal(capsys):
     for bad in ("../../../etc/passwd", "/etc/passwd", "..", "a/b", "learn/introspect"):
-        result = runner.invoke(app, ["explain", bad])
-        assert result.exit_code == 2, f"expected exit 2 for topic={bad!r}"
+        code = cli.main(["explain", bad])
+        capsys.readouterr()
+        assert code == 2, f"expected exit 2 for topic={bad!r}"

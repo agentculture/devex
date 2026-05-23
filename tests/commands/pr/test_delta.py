@@ -1,11 +1,8 @@
 from pathlib import Path
 
 import yaml
-from typer.testing import CliRunner
 
-from agent_experience.cli import app
-
-runner = CliRunner()
+import agent_experience.cli as cli
 
 
 def _setup_skills_local(tmp_path: Path, siblings: list[Path]) -> None:
@@ -25,33 +22,36 @@ def _make_sibling(root: Path, name: str, claude_md: str | None, culture: dict | 
     return p
 
 
-def test_delta_dumps_each_sibling(monkeypatch, tmp_path):
+def test_delta_dumps_each_sibling(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     s1 = _make_sibling(tmp_path, "sibling-a", "Line 1\nLine 2\n", {"agents": [{"name": "a"}]})
     s2 = _make_sibling(tmp_path, "sibling-b", "Other content\n", None)
     _setup_skills_local(tmp_path, [s1, s2])
-    result = runner.invoke(app, ["pr", "delta", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "sibling-a" in result.stdout
-    assert "Line 1" in result.stdout
-    assert "sibling-b" in result.stdout
-    assert "Other content" in result.stdout
-    assert "alignment drifted" in result.stdout
+    code = cli.main(["pr", "delta", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "sibling-a" in captured.out
+    assert "Line 1" in captured.out
+    assert "sibling-b" in captured.out
+    assert "Other content" in captured.out
+    assert "alignment drifted" in captured.out
 
 
-def test_delta_missing_skills_local(monkeypatch, tmp_path):
+def test_delta_missing_skills_local(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
-    result = runner.invoke(app, ["pr", "delta", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "skills.local.yaml" in result.stdout
-    assert "skills.local.yaml.example" in result.stderr
+    code = cli.main(["pr", "delta", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "skills.local.yaml" in captured.out
+    assert "skills.local.yaml.example" in captured.err
 
 
-def test_pr_delta_handles_gh_runtime_error_propagation(monkeypatch, tmp_path):
+def test_pr_delta_handles_gh_runtime_error_propagation(monkeypatch, tmp_path, capsys):
     # delta doesn't call gh today, but the cli handler should still be
     # defensive in case future implementations do.
     monkeypatch.chdir(tmp_path)
     # No skills.local.yaml — exits 0 via the existing path. Verify the
     # cli wrapper wires through correctly.
-    result = runner.invoke(app, ["pr", "delta", "--agent", "claude-code"])
-    assert result.exit_code == 0
+    code = cli.main(["pr", "delta", "--agent", "claude-code"])
+    capsys.readouterr()
+    assert code == 0

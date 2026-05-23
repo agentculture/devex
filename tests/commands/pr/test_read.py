@@ -1,12 +1,8 @@
 from pathlib import Path
 
-from typer.testing import CliRunner
-
-from agent_experience.cli import app
+import agent_experience.cli as cli
 from agent_experience.commands.pr.scripts import _journal
 from agent_experience.core import github
-
-runner = CliRunner()
 
 _QODO_FIXTURE = Path(__file__).parent / "fixtures" / "gh" / "qodo_summary_comment.html"
 
@@ -33,26 +29,28 @@ def _setup_clean(monkeypatch, *, comments=None, checks=None):
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
 
 
-def test_pr_read_one_shot_renders_briefing(monkeypatch, tmp_path):
+def test_pr_read_one_shot_renders_briefing(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup_clean(monkeypatch)
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "PR #42" in result.stdout
-    assert "Wait for human merge" in result.stdout
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "PR #42" in captured.out
+    assert "Wait for human merge" in captured.out
 
 
-def test_pr_read_with_failing_check(monkeypatch, tmp_path):
+def test_pr_read_with_failing_check(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup_clean(
         monkeypatch,
         checks=[{"name": "test", "status": "completed", "conclusion": "failure"}],
     )
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert "Fix CI" in result.stdout
+    cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert "Fix CI" in captured.out
 
 
-def test_pr_read_with_comments_emits_table(monkeypatch, tmp_path):
+def test_pr_read_with_comments_emits_table(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup_clean(
         monkeypatch,
@@ -67,12 +65,13 @@ def test_pr_read_with_comments_emits_table(monkeypatch, tmp_path):
             }
         ],
     )
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert "src/foo.py:12" in result.stdout
-    assert "qodo" in result.stdout
+    cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert "src/foo.py:12" in captured.out
+    assert "qodo" in captured.out
 
 
-def test_pr_read_surfaces_qodo_findings(monkeypatch, tmp_path):
+def test_pr_read_surfaces_qodo_findings(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup_clean(
         monkeypatch,
@@ -86,14 +85,15 @@ def test_pr_read_surfaces_qodo_findings(monkeypatch, tmp_path):
             }
         ],
     )
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "## Qodo review" in result.stdout
-    assert "Orphan honesty" in result.stdout
-    assert "src/agent_experience/core/render.py:42-55" in result.stdout
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "## Qodo review" in captured.out
+    assert "Orphan honesty" in captured.out
+    assert "src/agent_experience/core/render.py:42-55" in captured.out
 
 
-def test_pr_read_flags_collapsed_qodo_when_no_findings(monkeypatch, tmp_path):
+def test_pr_read_flags_collapsed_qodo_when_no_findings(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     body = (
         "<h3>Code Review by Qodo</h3>\n"
@@ -112,22 +112,24 @@ def test_pr_read_flags_collapsed_qodo_when_no_findings(monkeypatch, tmp_path):
             }
         ],
     )
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "⚠️" in result.stdout
-    assert "3 finding(s) in collapsed Qodo review block" in result.stdout
-    assert "expand on GitHub" in result.stdout
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "⚠️" in captured.out
+    assert "3 finding(s) in collapsed Qodo review block" in captured.out
+    assert "expand on GitHub" in captured.out
 
 
-def test_pr_read_writes_journal_event(monkeypatch, tmp_path):
+def test_pr_read_writes_journal_event(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup_clean(monkeypatch)
-    runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
+    cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    capsys.readouterr()
     events = _journal.load()
     assert any(e["type"] == "pr_read" and e["pr"] == 42 for e in events)
 
 
-def test_pr_read_wait_returns_when_ready(monkeypatch, tmp_path):
+def test_pr_read_wait_returns_when_ready(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
 
     state = {"calls": 0}
@@ -171,14 +173,15 @@ def test_pr_read_wait_returns_when_ready(monkeypatch, tmp_path):
 
     monkeypatch.setattr(read_script.time, "sleep", lambda s: None)
 
-    result = runner.invoke(app, ["pr", "read", "42", "--wait", "180", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "qodo" in result.stdout
+    code = cli.main(["pr", "read", "42", "--wait", "180", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "qodo" in captured.out
     events = _journal.load()
     assert any(e["type"] == "readiness_arrived" for e in events)
 
 
-def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path):
+def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         github,
@@ -203,13 +206,14 @@ def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path):
     monkeypatch.setattr(read_script.time, "sleep", lambda s: None)
 
     # --wait 1 with a short interval: one tick, then timeout.
-    result = runner.invoke(app, ["pr", "read", "42", "--wait", "1", "--agent", "claude-code"])
-    assert result.exit_code == 0
-    assert "Still waiting" in result.stdout
-    assert "Rerun `agex pr read 42 --wait 180`" in result.stdout
+    code = cli.main(["pr", "read", "42", "--wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "Still waiting" in captured.out
+    assert "Rerun `agex pr read 42 --wait 180`" in captured.out
 
 
-def test_sonar_project_key_env_override(monkeypatch, tmp_path):
+def test_sonar_project_key_env_override(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     seen: dict[str, str] = {}
 
@@ -242,20 +246,21 @@ def test_sonar_project_key_env_override(monkeypatch, tmp_path):
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
     monkeypatch.setenv("SONAR_PROJECT_KEY", "custom_override")
 
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert result.exit_code == 0
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    assert code == 0
     assert seen["gate_key"] == "custom_override"
     assert seen["issues_key"] == "custom_override"
 
 
-def test_pr_read_handles_gh_runtime_error(monkeypatch, tmp_path):
+def test_pr_read_handles_gh_runtime_error(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
 
     def _raise_not_authenticated(x):
         raise RuntimeError("gh failed: not authenticated")
 
     monkeypatch.setattr(github, "pr_view", _raise_not_authenticated)
-    result = runner.invoke(app, ["pr", "read", "42", "--agent", "claude-code"])
-    assert result.exit_code == 1
-    assert "not authenticated" in result.stderr
-    assert "rerun" in result.stderr.lower()
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "not authenticated" in captured.err
+    assert "rerun" in captured.err.lower()

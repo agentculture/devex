@@ -1,10 +1,6 @@
-from typer.testing import CliRunner
-
-from agent_experience.cli import app
+import agent_experience.cli as cli
 from agent_experience.commands.pr.scripts import _journal
 from agent_experience.core import github
-
-runner = CliRunner()
 
 
 def _patch(monkeypatch, *, view_returns, create_returns_pr=42, captured=None):
@@ -23,14 +19,13 @@ def _patch(monkeypatch, *, view_returns, create_returns_pr=42, captured=None):
     return captured
 
 
-def test_pr_open_creates_pr_and_signs_body(monkeypatch, tmp_path):
+def test_pr_open_creates_pr_and_signs_body(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     captured = _patch(monkeypatch, view_returns=None)
     body_file = tmp_path / "body.md"
     body_file.write_text("Some PR body without signature.\n", encoding="utf-8")
 
-    result = runner.invoke(
-        app,
+    code = cli.main(
         [
             "pr",
             "open",
@@ -40,30 +35,32 @@ def test_pr_open_creates_pr_and_signs_body(monkeypatch, tmp_path):
             "feat: x",
             "--body-file",
             str(body_file),
-        ],
+        ]
     )
-    assert result.exit_code == 0
+    out = capsys.readouterr()
+    assert code == 0
     assert captured["title"] == "feat: x"
     assert "- agex-cli (Claude)" in captured["body"]
     assert captured["draft"] is False
-    assert "PR opened" in result.stdout
-    assert "#42" in result.stdout
-    assert "agex pr read 42 --wait 180" in result.stdout
+    assert "PR opened" in out.out
+    assert "#42" in out.out
+    assert "agex pr read 42 --wait 180" in out.out
 
 
-def test_pr_open_does_not_double_sign(monkeypatch, tmp_path):
+def test_pr_open_does_not_double_sign(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     captured = _patch(monkeypatch, view_returns=None)
     body_file = tmp_path / "body.md"
     body_file.write_text("Body.\n\n- agex-cli (Claude)\n", encoding="utf-8")
 
-    runner.invoke(
-        app, ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
+    cli.main(
+        ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
     )
+    capsys.readouterr()
     assert captured["body"].count("- agex-cli (Claude)") == 1
 
 
-def test_pr_open_idempotent_when_pr_already_exists(monkeypatch, tmp_path):
+def test_pr_open_idempotent_when_pr_already_exists(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     create_called = {"n": 0}
     monkeypatch.setattr(github, "pr_view", lambda branch=None: {"number": 7, "state": "OPEN"})
@@ -77,23 +74,25 @@ def test_pr_open_idempotent_when_pr_already_exists(monkeypatch, tmp_path):
 
     body_file = tmp_path / "body.md"
     body_file.write_text("body\n", encoding="utf-8")
-    result = runner.invoke(
-        app, ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
+    code = cli.main(
+        ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
     )
-    assert result.exit_code == 0
+    out = capsys.readouterr()
+    assert code == 0
     assert create_called["n"] == 0
-    assert "already open" in result.stdout.lower()
-    assert "agex pr read 7" in result.stdout
+    assert "already open" in out.out.lower()
+    assert "agex pr read 7" in out.out
 
 
-def test_pr_open_writes_journal_event(monkeypatch, tmp_path):
+def test_pr_open_writes_journal_event(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _patch(monkeypatch, view_returns=None)
     body_file = tmp_path / "body.md"
     body_file.write_text("b\n", encoding="utf-8")
-    runner.invoke(
-        app, ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
+    cli.main(
+        ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
     )
+    capsys.readouterr()
     events = _journal.load()
     types = [e["type"] for e in events]
     assert "pr_opened" in types
@@ -102,13 +101,12 @@ def test_pr_open_writes_journal_event(monkeypatch, tmp_path):
     assert opened["title"] == "t"
 
 
-def test_pr_open_draft_flag(monkeypatch, tmp_path):
+def test_pr_open_draft_flag(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     captured = _patch(monkeypatch, view_returns=None)
     body_file = tmp_path / "body.md"
     body_file.write_text("b\n", encoding="utf-8")
-    runner.invoke(
-        app,
+    cli.main(
         [
             "pr",
             "open",
@@ -119,12 +117,13 @@ def test_pr_open_draft_flag(monkeypatch, tmp_path):
             "--body-file",
             str(body_file),
             "--draft",
-        ],
+        ]
     )
+    capsys.readouterr()
     assert captured["draft"] is True
 
 
-def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path):
+def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _patch(monkeypatch, view_returns=None)
     # Stub the read path so it just returns a sentinel briefing.
@@ -137,8 +136,7 @@ def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path):
     )
     body_file = tmp_path / "body.md"
     body_file.write_text("b\n", encoding="utf-8")
-    result = runner.invoke(
-        app,
+    code = cli.main(
         [
             "pr",
             "open",
@@ -149,9 +147,10 @@ def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path):
             "--body-file",
             str(body_file),
             "--delayed-read",
-        ],
+        ]
     )
-    assert result.exit_code == 0
-    assert "PR opened" in result.stdout
-    assert "#42" in result.stdout
-    assert "Briefing-stub" in result.stdout
+    out = capsys.readouterr()
+    assert code == 0
+    assert "PR opened" in out.out
+    assert "#42" in out.out
+    assert "Briefing-stub" in out.out

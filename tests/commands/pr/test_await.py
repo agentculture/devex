@@ -1,10 +1,6 @@
-from typer.testing import CliRunner
-
-from agent_experience.cli import app
+import agent_experience.cli as cli
 from agent_experience.commands.pr.scripts import _journal
 from agent_experience.core import github
-
-runner = CliRunner()
 
 
 def _setup(
@@ -51,23 +47,22 @@ def _ready_comment(author="qodo[bot]", body="lgtm", **overrides):
     return base
 
 
-def test_await_exit_0_when_ready_and_clean(monkeypatch, tmp_path):
+def test_await_exit_0_when_ready_and_clean(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(
         monkeypatch,
         comments=[_ready_comment()],
         sonar_gate={"projectStatus": {"status": "OK"}},
     )
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 0, result.stdout + result.stderr
-    assert "ready" in result.stdout.lower() or "wait for human merge" in result.stdout.lower()
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0, captured.out + captured.err
+    assert "ready" in captured.out.lower() or "wait for human merge" in captured.out.lower()
     events = _journal.load()
     assert any(e["type"] == "pr_await" and e.get("outcome") == "clean" for e in events)
 
 
-def test_await_exit_1_on_gate_error(monkeypatch, tmp_path):
+def test_await_exit_1_on_gate_error(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(
         monkeypatch,
@@ -77,12 +72,11 @@ def test_await_exit_1_on_gate_error(monkeypatch, tmp_path):
             {"severity": "MAJOR", "message": "Cognitive complexity", "component": "x.py", "line": 1}
         ],
     )
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 1
-    assert "ERROR" in result.stdout
-    assert "SonarCloud quality gate" in result.stdout
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "ERROR" in captured.out
+    assert "SonarCloud quality gate" in captured.out
     events = _journal.load()
     assert any(
         e["type"] == "pr_await" and e.get("outcome") == "blocked" and e.get("gate_error") is True
@@ -90,7 +84,7 @@ def test_await_exit_1_on_gate_error(monkeypatch, tmp_path):
     )
 
 
-def test_await_exit_1_on_unresolved_threads(monkeypatch, tmp_path):
+def test_await_exit_1_on_unresolved_threads(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(
         monkeypatch,
@@ -102,14 +96,13 @@ def test_await_exit_1_on_unresolved_threads(monkeypatch, tmp_path):
             {"id": "T3", "isResolved": True},
         ],
     )
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 1
-    assert "replies.jsonl" in result.stdout
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "replies.jsonl" in captured.out
 
 
-def test_await_resolved_threads_do_not_block(monkeypatch, tmp_path):
+def test_await_resolved_threads_do_not_block(monkeypatch, tmp_path, capsys):
     """All review threads resolved → exit 0 even when raw inline comments remain.
 
     Regression for v0.1 heuristic that counted top-level inline comments
@@ -133,13 +126,12 @@ def test_await_resolved_threads_do_not_block(monkeypatch, tmp_path):
         sonar_gate={"projectStatus": {"status": "OK"}},
         review_threads=[{"id": "T1", "isResolved": True}],
     )
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 0, result.stdout
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0, captured.out
 
 
-def test_await_exit_1_on_ci_failure(monkeypatch, tmp_path):
+def test_await_exit_1_on_ci_failure(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(
         monkeypatch,
@@ -147,42 +139,37 @@ def test_await_exit_1_on_ci_failure(monkeypatch, tmp_path):
         checks=[{"name": "test", "status": "completed", "conclusion": "failure"}],
         sonar_gate={"projectStatus": {"status": "OK"}},
     )
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 1
-    assert "Fix CI" in result.stdout
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "Fix CI" in captured.out
     events = _journal.load()
     assert any(
-        e["type"] == "pr_await"
-        and e.get("outcome") == "blocked"
-        and e.get("ci_state") == "failure"
+        e["type"] == "pr_await" and e.get("outcome") == "blocked" and e.get("ci_state") == "failure"
         for e in events
     )
 
 
-def test_await_timeout_exits_0_with_still_waiting(monkeypatch, tmp_path):
+def test_await_timeout_exits_0_with_still_waiting(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(monkeypatch, comments=[])  # never ready
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 0
-    assert "Still waiting" in result.stdout
-    assert "Rerun `agex pr await 42`" in result.stdout
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "Still waiting" in captured.out
+    assert "Rerun `agex pr await 42`" in captured.out
     events = _journal.load()
     assert any(e["type"] == "pr_await" and e.get("outcome") == "timeout" for e in events)
 
 
-def test_await_handles_gh_runtime_error(monkeypatch, tmp_path):
+def test_await_handles_gh_runtime_error(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
 
     def _raise(x):
         raise RuntimeError("gh failed: not authenticated")
 
     monkeypatch.setattr(github, "pr_view", _raise)
-    result = runner.invoke(
-        app, ["pr", "await", "42", "--max-wait", "0", "--agent", "claude-code"]
-    )
-    assert result.exit_code == 1
-    assert "not authenticated" in result.stderr
+    code = cli.main(["pr", "await", "42", "--max-wait", "0", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "not authenticated" in captured.err
