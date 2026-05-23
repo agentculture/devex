@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-05-24
+
+### Fixed
+
+- **`agex pr` SonarCloud fetch no longer aborts on a transient failure.**
+  `core.github.sonar_quality_gate` / `sonar_new_issues` previously caught
+  only HTTP 404; any other `gh` failure (timeout, 5xx, rate-limit, auth) or
+  a non-JSON body propagated and aborted `agex pr read` / `agex pr await`.
+  They now degrade to a `SONAR_GATE_SKIPPED` sentinel (gate) / `[]` (issues)
+  — distinct from `None` "project not registered" — and the briefing renders
+  `Quality gate: **SKIPPED** _(SonarCloud unreachable — gate not evaluated)_`.
+  `await` treats `SKIPPED` as non-blocking (exit 0). Python equivalent of
+  [steward#31](https://github.com/agentculture/steward/issues/31) (the
+  upstream loss of the 0.9.2 `pr-comments.sh` hardening).
+- **`agex pr await` now gates on a Quality Gate of `UNKNOWN`.** The gate
+  matched only `ERROR`, so a registered project reporting `UNKNOWN` (analysis
+  pending / indeterminate) passed as a false-positive "clean" readiness
+  signal. `UNKNOWN` now blocks (exit non-zero) with a dedicated
+  `await_gate_unknown` footer across all four backends. Mirrors
+  [steward#33](https://github.com/agentculture/steward/issues/33) bug 2.
+  (Steward's bugs 1/3/4 and [steward#32](https://github.com/agentculture/steward/issues/32)
+  are script-specific and N/A — agex-cli ships no `pr-status.sh` /
+  `portability-lint.sh`.)
+
 ## [0.21.0] - 2026-05-23
 
 ### Removed

@@ -21,7 +21,7 @@ _No checks reported._
 ## SonarCloud
 
 {% if sonar_gate -%}
-Quality gate: **{{ sonar_gate.projectStatus.status }}**
+Quality gate: **{{ sonar_gate.projectStatus.status }}**{% if sonar_gate.projectStatus.status == "SKIPPED" %} _(SonarCloud unreachable — gate not evaluated)_{% endif %}
 {% if sonar_issues -%}
 {{ sonar_issues | length }} new issue(s):
 {% for i in sonar_issues -%}

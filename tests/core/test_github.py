@@ -248,3 +248,55 @@ def test_sonar_new_issues_returns_empty_on_404(monkeypatch):
         lambda *a, **k: _FakeCompleted(stderr="HTTP 404\n", returncode=1),
     )
     assert github.sonar_new_issues("missing_project", pr=42) == []
+
+
+def test_sonar_quality_gate_skipped_on_transient_error(monkeypatch):
+    """A non-404 gh failure (5xx, timeout, rate-limit) degrades to SKIPPED.
+
+    Regression for steward#31: only 404 was caught, so any transient
+    SonarCloud failure propagated and aborted pr read / pr await.
+    """
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stderr="HTTP 503 Service Unavailable\n", returncode=1),
+    )
+    assert github.sonar_quality_gate("owner_repo", pr=42) == github.SONAR_GATE_SKIPPED
+
+
+def test_sonar_quality_gate_skipped_on_non_json(monkeypatch):
+    """A 200 with a non-JSON body (e.g. an HTML error page) degrades to SKIPPED."""
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
+    )
+    assert github.sonar_quality_gate("owner_repo", pr=42) == github.SONAR_GATE_SKIPPED
+
+
+def test_sonar_new_issues_empty_on_transient_error(monkeypatch):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stderr="HTTP 503 Service Unavailable\n", returncode=1),
+    )
+    assert github.sonar_new_issues("owner_repo", pr=42) == []
+
+
+def test_sonar_new_issues_empty_on_non_json(monkeypatch):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
+    )
+    assert github.sonar_new_issues("owner_repo", pr=42) == []
+
+
+def test_sonar_gate_skipped_sentinel_is_immutable():
+    """The shared SKIPPED sentinel is handed out by reference, so it must be
+    immutable at both nesting levels — a mutating caller can't corrupt later
+    calls/tests."""
+    with pytest.raises(TypeError):
+        github.SONAR_GATE_SKIPPED["projectStatus"] = {}  # type: ignore[index]
+    with pytest.raises(TypeError):
+        github.SONAR_GATE_SKIPPED["projectStatus"]["status"] = "OK"  # type: ignore[index]

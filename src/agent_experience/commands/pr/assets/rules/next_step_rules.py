@@ -47,9 +47,12 @@ def await_next_step(
     gate_error: bool,
     threads_unresolved: int,
     ci_red: bool,
+    gate_unknown: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     if gate_error:
         return "await_gate_error", {"pr": pr}
+    if gate_unknown:
+        return "await_gate_unknown", {"pr": pr}
     if threads_unresolved > 0:
         return "await_unresolved_threads", {"pr": pr}
     if ci_red:

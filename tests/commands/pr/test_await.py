@@ -84,6 +84,59 @@ def test_await_exit_1_on_gate_error(monkeypatch, tmp_path, capsys):
     )
 
 
+def test_await_exit_1_on_gate_unknown(monkeypatch, tmp_path, capsys):
+    """A registered project reporting UNKNOWN must not be a false 'clean'.
+
+    Regression for steward#33 bug 2: the gate matched only ERROR, so an
+    UNKNOWN (analysis pending) gate passed and printed a clean readiness
+    signal.  UNKNOWN now blocks with its own footer.
+    """
+    monkeypatch.chdir(tmp_path)
+    _setup(
+        monkeypatch,
+        comments=[_ready_comment()],
+        sonar_gate={"projectStatus": {"status": "UNKNOWN"}},
+    )
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1, captured.out + captured.err
+    assert "UNKNOWN" in captured.out
+    assert "analysis is pending" in captured.out
+    events = _journal.load()
+    assert any(
+        e["type"] == "pr_await"
+        and e.get("outcome") == "blocked"
+        and e.get("gate_status") == "UNKNOWN"
+        and e.get("gate_error") is False
+        for e in events
+    )
+
+
+def test_await_skipped_gate_does_not_block(monkeypatch, tmp_path, capsys):
+    """A transient SonarCloud failure (SKIPPED sentinel) must not flunk await.
+
+    Regression for steward#31: a Sonar blip degrades to ``SONAR_GATE_SKIPPED``
+    in core.github; the gate treats SKIPPED as non-blocking so await exits 0
+    and still gates on threads/CI independently.
+    """
+    monkeypatch.chdir(tmp_path)
+    _setup(
+        monkeypatch,
+        comments=[_ready_comment()],
+        sonar_gate=github.SONAR_GATE_SKIPPED,
+    )
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0, captured.out + captured.err
+    events = _journal.load()
+    assert any(
+        e["type"] == "pr_await"
+        and e.get("outcome") == "clean"
+        and e.get("gate_status") == "SKIPPED"
+        for e in events
+    )
+
+
 def test_await_exit_1_on_unresolved_threads(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(

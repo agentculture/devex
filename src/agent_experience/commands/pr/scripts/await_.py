@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import sys
 import time
+from collections.abc import Mapping
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 
 from agent_experience.commands.pr.assets.rules.next_step_rules import (
     await_next_step,
@@ -36,11 +38,16 @@ def _resolve_pr(pr: int | None) -> int:
     return int(view["number"])
 
 
-def _gate_is_error(gate: dict | None) -> bool:
+def _gate_status(gate: Mapping[str, Any] | None) -> str | None:
+    """Normalized SonarCloud quality-gate status, or None when there's no gate.
+
+    ``None`` covers both an absent gate dict and an unregistered project (the
+    github helper returns ``None`` on 404).  ``SKIPPED`` is the synthetic
+    transient-failure sentinel and is treated as non-blocking by the caller.
+    """
     if not gate:
-        return False
-    status = gate.get("projectStatus", {}).get("status")
-    return status == "ERROR"
+        return None
+    return gate.get("projectStatus", {}).get("status")
 
 
 def run(
@@ -116,11 +123,14 @@ def run(
 
     threads_unresolved = _readiness.threads_unresolved(pr_number)
     ci_red = any(c.get("conclusion") == "failure" for c in checks)
-    gate_error = _gate_is_error(sonar_gate)
+    gate_status = _gate_status(sonar_gate)
+    gate_error = gate_status == "ERROR"
+    gate_unknown = gate_status == "UNKNOWN"
 
     footer_key, footer_ctx = await_next_step(
         pr=pr_number,
         gate_error=gate_error,
+        gate_unknown=gate_unknown,
         threads_unresolved=threads_unresolved,
         ci_red=ci_red,
     )
@@ -141,12 +151,13 @@ def run(
         },
     )
 
-    exit_code = 1 if (gate_error or threads_unresolved > 0 or ci_red) else 0
+    exit_code = 1 if (gate_error or gate_unknown or threads_unresolved > 0 or ci_red) else 0
     _journal.append(
         {
             "type": "pr_await",
             "pr": pr_number,
             "outcome": "blocked" if exit_code else "clean",
+            "gate_status": gate_status,
             "gate_error": gate_error,
             "threads_unresolved": threads_unresolved,
             "ci_state": "failure" if ci_red else "ok",

@@ -1,6 +1,6 @@
 [project]
 name = "agex-cli"
-version = "0.21.0"
+version = "0.21.1"
 description = "Agent-operated developer-experience CLI — deterministic per-backend markdown briefings for autonomous agents."
 authors = [{name = "Ori Nachum"}]
 license = {text = "MIT"}
