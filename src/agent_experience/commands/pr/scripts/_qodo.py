@@ -94,7 +94,9 @@ def _extract_location(span: str) -> tuple[str | None, str | None, str | None]:
     if m:
         path = m.group("path").rstrip("/")
         start, end = m.group("start"), m.group("end")
-        line = (f"{start}-{end}" if end else start) if start else None
+        line = None
+        if start:
+            line = f"{start}-{end}" if end else start
         return path, line, m.group(0)
     return None, None, None
 

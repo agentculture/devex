@@ -29,31 +29,51 @@ def parse_backend(value: str) -> Backend:
         raise ValueError(f"unknown backend '{value}' (one of: {_VALID_DISPLAY})") from None
 
 
+def _first_agent(project_dir: Path) -> dict | None:
+    """Return the first agent mapping in culture.yaml, or None."""
+    culture = project_dir / "culture.yaml"
+    if not culture.exists():
+        return None
+    try:
+        data = yaml.safe_load(culture.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None
+    agents = data.get("agents") or []
+    if isinstance(agents, list) and agents and isinstance(agents[0], dict):
+        return agents[0]
+    return None
+
+
+def _backend_from_culture(project_dir: Path) -> Backend | None:
+    """Resolve the backend from culture.yaml's first agent, or None when
+    absent.  Raises a descriptive ValueError when the value is unknown.
+    """
+    agent = _first_agent(project_dir)
+    if agent is None:
+        return None
+    backend_value = agent.get("backend")
+    if not backend_value:
+        return None
+    try:
+        return parse_backend(backend_value)
+    except ValueError:
+        suffix = agent.get("suffix") or "?"
+        raise ValueError(
+            f"culture.yaml agent '{suffix}' has unknown backend "
+            f"'{backend_value}'\n"
+            f"hint: expected one of {_VALID_DISPLAY}"
+        ) from None
+
+
 def resolve_backend(arg: str | None, project_dir: Path) -> Backend:
     """Resolve --agent: explicit arg wins, else first agent's backend
     in culture.yaml, else raise.
     """
     if arg is not None:
         return parse_backend(arg)
-    culture = project_dir / "culture.yaml"
-    if culture.exists():
-        try:
-            data = yaml.safe_load(culture.read_text(encoding="utf-8")) or {}
-        except yaml.YAMLError:
-            data = {}
-        agents = data.get("agents") or []
-        if agents and isinstance(agents[0], dict):
-            backend_value = agents[0].get("backend")
-            if backend_value:
-                try:
-                    return parse_backend(backend_value)
-                except ValueError:
-                    suffix = agents[0].get("suffix") or "?"
-                    raise ValueError(
-                        f"culture.yaml agent '{suffix}' has unknown backend "
-                        f"'{backend_value}'\n"
-                        f"hint: expected one of {_VALID_DISPLAY}"
-                    ) from None
+    backend = _backend_from_culture(project_dir)
+    if backend is not None:
+        return backend
     raise ValueError(
         f"--agent required (one of: {_VALID_DISPLAY}) or set 'backend:' on the "
         f"first agent in culture.yaml"
