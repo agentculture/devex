@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-05-24
+
+### Changed
+
+- **Clarified `agex pr read --wait` / `agex pr await --max-wait` semantics**
+  ([#55](https://github.com/agentculture/agex-cli/issues/55)). `--wait N` is an
+  *upper bound*, not a minimum sleep: the readiness loop already evaluates the
+  predicate on entry and returns as soon as it holds — including immediately
+  (`waited=0s`) when required reviewers have already posted. When that happens
+  the stderr heartbeat now appends `(readiness already satisfied on entry; not
+  polling)`, distinguishing "satisfied on entry; never polled" from "polled and
+  became ready instantly". `--help` text and `agex explain pr` now document the
+  upper-bound semantics and spell out that `ready=True` means *review-feedback-
+  present* (every `[pr].required_reviewers`, default `["qodo"]`, has commented),
+  **not** merge-ready — use `agex pr await` for CI + Sonar + thread gating.
+  No behavior change to the polling loop. The shared heartbeat formatting now
+  lives in `_readiness.heartbeat()` so `read` and `await` stay consistent.
+
 ## [0.21.1] - 2026-05-24
 
 ### Fixed

@@ -198,6 +198,55 @@ def test_pr_read_wait_returns_when_ready(monkeypatch, tmp_path, capsys):
     assert any(e["type"] == "readiness_arrived" for e in events)
 
 
+def test_pr_read_wait_satisfied_on_entry(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        github,
+        "pr_view",
+        lambda x: {
+            "number": 42,
+            "state": "OPEN",
+            "title": "t",
+            "url": "",
+            "headRefName": "h",
+            "baseRefName": "main",
+        },
+    )
+    monkeypatch.setattr(github, "pr_checks", lambda pr: [])
+    # Required reviewer feedback is already present on the very first poll.
+    monkeypatch.setattr(
+        github,
+        "pr_comments",
+        lambda pr: [
+            {
+                "type": "inline",
+                "id": 1,
+                "body": "nit",
+                "author": "qodo[bot]",
+                "path": "x.py",
+                "line": 1,
+            }
+        ],
+    )
+    monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: None)
+    monkeypatch.setattr(github, "sonar_new_issues", lambda *a, **k: [])
+    monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
+    monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
+
+    def _fail_sleep(s):  # never reached: short-circuits at waited=0s
+        raise AssertionError("should not sleep when ready on entry")
+
+    from agent_experience.commands.pr.scripts import read as read_script
+
+    monkeypatch.setattr(read_script.time, "sleep", _fail_sleep)
+
+    code = cli.main(["pr", "read", "42", "--wait", "240", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "waited=0s" in captured.err
+    assert "readiness already satisfied on entry" in captured.err
+
+
 def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(

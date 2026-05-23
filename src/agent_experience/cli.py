@@ -365,7 +365,13 @@ def _register_pr(sub: argparse._SubParsersAction) -> None:
     p_read = pr_sub.add_parser("read", help="Read PR review state.")
     p_read.add_argument("pr", type=int, nargs="?", default=None)
     p_read.add_argument(
-        "--wait", type=int, default=None, help="Poll for readiness up to SECS seconds."
+        "--wait",
+        type=int,
+        default=None,
+        help=(
+            "Upper bound in seconds to poll for required-reviewer readiness; "
+            "returns early (down to waited=0s) once satisfied."
+        ),
     )
     _add_agent_option(p_read, required=False, help_text=_AGENT_HELP)
     p_read.set_defaults(func=_cmd_pr_read)
@@ -383,7 +389,10 @@ def _register_pr(sub: argparse._SubParsersAction) -> None:
         "--max-wait",
         type=int,
         default=1800,
-        help="Poll for readiness up to SECS seconds (default 1800).",
+        help=(
+            "Upper bound in seconds to poll for required-reviewer readiness; "
+            "returns early (down to waited=0s) once satisfied (default 1800)."
+        ),
     )
     _add_agent_option(p_await, required=False, help_text=_AGENT_HELP)
     p_await.set_defaults(func=_cmd_pr_await)

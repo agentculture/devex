@@ -72,8 +72,7 @@ def run(
             comments = github.pr_comments(pr_number)
             ready, waiting_for = _readiness.is_ready(comments, required)
             sys.stderr.write(
-                f"agex: pr_read --wait: pr={pr_number} waited={waited_secs}s "
-                f"ready={ready} waiting_for={waiting_for}\n"
+                _readiness.heartbeat("pr_read --wait", pr_number, waited_secs, ready, waiting_for)
             )
             sys.stderr.flush()
             if ready:
