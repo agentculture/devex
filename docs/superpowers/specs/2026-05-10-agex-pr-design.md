@@ -186,7 +186,7 @@ Side effects: one `gh pr create`, one journal append (plus whatever `--delayed-r
 ### `agex pr read [<PR>] [--wait SECS]`
 
 1. Validate `--agent`. Resolve `<PR>`: explicit arg wins, else `gh pr view --json number` for current branch.
-2. **If `--wait SECS` given:** loop with bounded sleep (60s interval, capped by `SECS`):
+2. **If `--wait SECS` given:** loop with bounded sleep (60s interval, capped by `SECS`). `SECS` is an **upper bound**, not a minimum sleep: readiness is evaluated on entry, so the loop may return at `waited=0s` when it's already satisfied (the stderr heartbeat then notes "readiness already satisfied on entry; not polling").
    - Each iteration: `gh api repos/.../pulls/<PR>` for state, `gh api repos/.../issues/<PR>/comments` for new bot comments.
    - Readiness gate: required reviewers (default from `[pr].required_reviewers`, falling back to `["qodo"]`) have posted real (non-placeholder) feedback, OR PR closed.
    - Heartbeat to **stderr** every iteration (final briefing only on stdout — preserves the bash invariant).

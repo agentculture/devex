@@ -22,6 +22,22 @@ def required_reviewers() -> list[str]:
     return list(cfg.pr.get("required_reviewers", DEFAULT_REVIEWERS))
 
 
+def heartbeat(label: str, pr: int, waited_secs: int, ready: bool, waiting_for: list[str]) -> str:
+    """Format one stderr heartbeat line for a readiness poll iteration.
+
+    ``--wait`` / ``--max-wait`` is an *upper bound*, not a minimum sleep: the
+    loop returns as soon as the readiness predicate holds, including
+    immediately (``waited=0s``) when it already held on entry.  In that
+    satisfied-on-entry case we append an explicit note so callers can tell
+    "satisfied on entry; never polled" apart from "polled and it became ready
+    instantly".
+    """
+    line = f"agex: {label}: pr={pr} waited={waited_secs}s ready={ready} waiting_for={waiting_for}"
+    if ready and waited_secs == 0:
+        line += " (readiness already satisfied on entry; not polling)"
+    return line + "\n"
+
+
 def is_ready(
     comments: list[dict[str, Any]], required: list[str]
 ) -> tuple[bool, list[str]]:

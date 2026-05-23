@@ -22,6 +22,24 @@ difference is the exit code. Use `read` when you want the briefing
 unconditionally; use `await` when you want to **gate** the next step on
 PR health (e.g., in scripts that should fail if Sonar errors).
 
+## Readiness and `--wait` semantics
+
+- **`--wait` / `--max-wait` is an upper bound, not a minimum sleep.** It's the
+  *maximum* time to poll (60s interval). The loop returns as soon as the
+  readiness predicate holds — including **immediately** (`waited=0s`) if it
+  already held on entry. When that happens the stderr heartbeat appends
+  `(readiness already satisfied on entry; not polling)`, so a fast return on a
+  large `--wait` is expected, not a bug.
+- **What "ready" means.** `ready=True` when every reviewer in
+  `[pr].required_reviewers` (default `["qodo"]`) has posted a non-empty comment.
+  This is **review-feedback-present**, *not* merge-ready: it says nothing about
+  unresolved review threads, CI checks, or the SonarCloud quality gate. Widen
+  the predicate by adding reviewers to `[pr].required_reviewers` in
+  `.agex/config.toml`.
+- **Need merge-gating?** Use `agex pr await`, which adds the CI + Sonar + thread
+  gates on top of the same readiness loop and **exits non-zero** when the PR
+  isn't clean.
+
 ## SonarCloud project key
 
 `pr read` and `pr await` query the SonarCloud quality gate for the current

@@ -62,6 +62,20 @@ def test_await_exit_0_when_ready_and_clean(monkeypatch, tmp_path, capsys):
     assert any(e["type"] == "pr_await" and e.get("outcome") == "clean" for e in events)
 
 
+def test_await_heartbeat_notes_satisfied_on_entry(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    _setup(
+        monkeypatch,
+        comments=[_ready_comment()],  # ready on the very first poll
+        sonar_gate={"projectStatus": {"status": "OK"}},
+    )
+    code = cli.main(["pr", "await", "42", "--max-wait", "240", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0, captured.out + captured.err
+    assert "waited=0s" in captured.err
+    assert "readiness already satisfied on entry" in captured.err
+
+
 def test_await_exit_1_on_gate_error(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _setup(
