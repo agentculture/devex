@@ -290,3 +290,13 @@ def test_sonar_new_issues_empty_on_non_json(monkeypatch):
         lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
     )
     assert github.sonar_new_issues("owner_repo", pr=42) == []
+
+
+def test_sonar_gate_skipped_sentinel_is_immutable():
+    """The shared SKIPPED sentinel is handed out by reference, so it must be
+    immutable at both nesting levels — a mutating caller can't corrupt later
+    calls/tests."""
+    with pytest.raises(TypeError):
+        github.SONAR_GATE_SKIPPED["projectStatus"] = {}  # type: ignore[index]
+    with pytest.raises(TypeError):
+        github.SONAR_GATE_SKIPPED["projectStatus"]["status"] = "OK"  # type: ignore[index]

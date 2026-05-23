@@ -19,7 +19,9 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import yaml
@@ -278,10 +280,14 @@ _SONAR_HOST_ARGS = ["--hostname", "sonarcloud.io"]
 # network/HTTP failure or a non-JSON body).  Distinct from ``None`` (404 / not
 # registered) so the briefing and the `await` gate can tell "couldn't check"
 # apart from "no project".  ``SKIPPED`` is treated as non-blocking by the gate.
-SONAR_GATE_SKIPPED: dict[str, Any] = {"projectStatus": {"status": "SKIPPED"}}
+# Immutable at both nesting levels: this single instance is handed out by
+# reference, so a caller can never mutate the shared sentinel.
+SONAR_GATE_SKIPPED: Mapping[str, Any] = MappingProxyType(
+    {"projectStatus": MappingProxyType({"status": "SKIPPED"})}
+)
 
 
-def sonar_quality_gate(project_key: str, pr: int) -> dict[str, Any] | None:
+def sonar_quality_gate(project_key: str, pr: int) -> Mapping[str, Any] | None:
     """Query SonarCloud for PR quality gate status.
 
     Returns ``None`` when the project is not registered (404).  On any other

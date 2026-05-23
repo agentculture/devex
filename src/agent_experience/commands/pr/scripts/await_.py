@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import sys
 import time
+from collections.abc import Mapping
 from importlib.resources import files
 from pathlib import Path
+from typing import Any
 
 from agent_experience.commands.pr.assets.rules.next_step_rules import (
     await_next_step,
@@ -36,7 +38,7 @@ def _resolve_pr(pr: int | None) -> int:
     return int(view["number"])
 
 
-def _gate_status(gate: dict | None) -> str | None:
+def _gate_status(gate: Mapping[str, Any] | None) -> str | None:
     """Normalized SonarCloud quality-gate status, or None when there's no gate.
 
     ``None`` covers both an absent gate dict and an unregistered project (the
