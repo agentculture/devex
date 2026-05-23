@@ -12,6 +12,7 @@ description: >
   from steward 0.11.0 (identifier-only divergence); upstream renamed from
   `coordinate` in steward 0.8.0 and absorbed `gh-issues` in 0.9.1. Issue
   I/O is backed by `agtag` (>=0.1) starting in steward 0.11.0.
+type: command
 ---
 
 # Communicate (Cross-Repo + Mesh)

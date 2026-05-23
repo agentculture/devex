@@ -12,6 +12,7 @@ description: >
   the native verbs; the only file is `workflow.sh`, a typing-saver.
   Remaining `pr-status.sh` extras tracked in agex-cli#52). Renamed from
   `pr-review` upstream in steward 0.7.0; rebased on `agex pr` in 0.12.0.
+type: command
 ---
 
 # CI/CD — agex-cli edition
@@ -72,10 +73,11 @@ SonarCloud project key is derived as `<owner>_<repo>`; override with the
 | `workflow.sh await [PR] [--max-wait N]` | `agex pr await`. Readiness poll → CI → Sonar gate → briefing. Exits non-zero on Sonar `ERROR`, unresolved threads, or CI failure. The single command to run after pushing a fix. |
 | `workflow.sh help` | Print the verb list. |
 
-`workflow.sh` defaults `--agent` to `claude-code` — the canonical value
-every agex version accepts (the newer `claude` alias is absent from older
-installs). Override with `AGEX_PR_AGENT` to run under `codex` / `copilot`
-/ `acp`.
+`workflow.sh` does **not** inject a default `--agent` (design invariant #3
+forbids backend defaulting). It lets `agex` resolve the backend from this
+repo's `culture.yaml` (`backend: claude`), failing fast if neither that nor
+a flag is present. Set `AGEX_PR_AGENT` to force a backend (`codex` /
+`copilot` / `acp`).
 
 ## Long waits (background polling)
 

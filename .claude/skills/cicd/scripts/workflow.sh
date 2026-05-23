@@ -30,14 +30,17 @@ set -euo pipefail
 #                          threads / CI failure.
 #   help                   print this message
 
-# agex's `--agent` accepts claude-code|codex|copilot|acp (plus a `claude`
-# alias added in #46). We default to the canonical `claude-code` because it
-# is accepted by *every* agex version — the `claude` alias is absent from
-# older installs (e.g. a globally pinned 0.18.0). resolve_backend() would
-# also fall back to culture.yaml when --agent is omitted, but passing it
-# explicitly keeps the wrapper robust across versions. Override via
-# AGEX_PR_AGENT to run under codex/copilot/acp.
-AGEX_AGENT="${AGEX_PR_AGENT:-claude-code}"
+# Backend selection follows agex's own contract — we deliberately do NOT
+# inject a default `--agent`. Design invariant #3 forbids backend
+# defaulting / auto-detection; agex's `resolve_backend()` already provides
+# the sanctioned no-flag path: an explicit --agent wins, else it reads
+# `backend:` from this repo's culture.yaml (here `claude` → claude-code),
+# else it fails fast. So leave AGEX_PR_AGENT unset to let culture.yaml
+# decide; set it to force a backend (e.g. codex / copilot / acp).
+AGENT_ARGS=()
+if [ -n "${AGEX_PR_AGENT:-}" ]; then
+    AGENT_ARGS=(--agent "$AGEX_PR_AGENT")
+fi
 
 require_agex() {
     if ! command -v agex >/dev/null 2>&1; then
@@ -51,31 +54,35 @@ require_agex() {
 cmd="${1:-help}"
 shift || true
 
+# Safe expansion of a possibly-empty array under `set -u` (portable to the
+# bash 3.2 that ships on macOS).
+agex_pr() { exec agex pr "$1" "${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"}" "${@:2}"; }
+
 case "$cmd" in
     lint)
         require_agex
-        exec agex pr lint --agent "$AGEX_AGENT" --exit-on-violation "$@"
+        agex_pr lint --exit-on-violation "$@"
         ;;
     open)
         require_agex
-        exec agex pr open --agent "$AGEX_AGENT" --delayed-read "$@"
+        agex_pr open --delayed-read "$@"
         ;;
     read)
         require_agex
-        exec agex pr read --agent "$AGEX_AGENT" "$@"
+        agex_pr read "$@"
         ;;
     reply)
         require_agex
         PR="${1:?Usage: workflow.sh reply <PR>  (JSONL on stdin)}"
-        exec agex pr reply --agent "$AGEX_AGENT" "$PR"
+        agex_pr reply "$PR"
         ;;
     delta)
         require_agex
-        exec agex pr delta --agent "$AGEX_AGENT" "$@"
+        agex_pr delta "$@"
         ;;
     await)
         require_agex
-        exec agex pr await --agent "$AGEX_AGENT" "$@"
+        agex_pr await "$@"
         ;;
     help|--help|-h)
         sed -n '13,31p' "${BASH_SOURCE[0]}" | sed 's/^# *//;s/^#$//'

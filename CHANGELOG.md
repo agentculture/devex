@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of re-vendored as bash. Divergence recorded in the `SKILL.md`
   frontmatter and `docs/skill-sources.md` per the cite-don't-import policy.
 
+### Fixed
+
+- **Vendored skills are now discoverable by the Claude Code probe.** Both
+  `.claude/skills/cicd/SKILL.md` and the existing
+  `.claude/skills/communicate/SKILL.md` were missing the `type:` frontmatter
+  field required by `core.skill_loader`, so `backends/claude_code/probe.py`
+  silently skipped them (they never appeared in `agex overview`). Both now
+  declare `type: command`. `cicd`'s `workflow.sh` also no longer injects a
+  default `--agent` — it defers to `agex`'s own `culture.yaml` backend
+  resolution per design invariant #3 (no backend defaulting), passing
+  `--agent` only when `AGEX_PR_AGENT` is set.
+
 ## [0.20.0] - 2026-05-23
 
 ### Changed
