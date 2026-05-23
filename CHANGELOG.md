@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-05-23
+
+### Added
+
+- **Vendored the `cicd` skill** at `.claude/skills/cicd/`, finishing the
+  cicd half of #51 (and #34). Because agex-cli **owns** `agex pr`, this is
+  an *adapted-thin* vendor rather than a verbatim copy: the only script is
+  `workflow.sh`, a typing-saver that delegates `lint` / `open` / `read` /
+  `reply` / `delta` / `await` straight to the native `agex pr` verbs
+  (steward's `await` points `read --wait` at a `pr-status.sh` gate; here it
+  forwards to the native `agex pr await`). Steward's `status`/`await` shell
+  extensions and the `_resolve-nick.sh` / `pr-reply.sh` / `portability-lint.sh`
+  helpers are dropped — every one duplicates Python this repo already ships.
+  The remaining `pr-status.sh` extras (SonarCloud hotspots, deploy-preview
+  URL, explicit thread tally) are tracked as a native feature ask in #52
+  instead of re-vendored as bash. Divergence recorded in the `SKILL.md`
+  frontmatter and `docs/skill-sources.md` per the cite-don't-import policy.
+
 ## [0.20.0] - 2026-05-23
 
 ### Changed
