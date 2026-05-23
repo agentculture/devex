@@ -1,8 +1,17 @@
+"""agex CLI — stdlib argparse front end.
+
+No third-party CLI framework: this module routes `agex <command> [args]`
+through `argparse` only, mirroring the skeleton used by the sibling Culture
+repos (steward, devague). Business logic stays in `commands/<name>/scripts/`,
+which return ``(stdout, exit_code, stderr)`` tuples; this module just parses
+arguments and echoes those tuples. Adding a backend or command never touches
+the parsing core beyond a `register_*` call.
+"""
+
+import argparse
 import sys
 from pathlib import Path
-from typing import Any, Optional
-
-import typer
+from typing import Optional
 
 from agent_experience import __version__
 from agent_experience.commands.doctor.scripts import doctor as doctor_script
@@ -20,324 +29,393 @@ from agent_experience.commands.pr.scripts import read as pr_read_script
 from agent_experience.commands.pr.scripts import reply as pr_reply_script
 from agent_experience.core.backend import parse_backend
 
-app = typer.Typer(
-    name="agex",
-    help="Agent-operated developer-experience CLI.",
-    no_args_is_help=True,
-)
-
 _GH_RERUN_HINT = "agex: rerun once network is reachable (gh failed)"
+_AGENT_HELP = "Backend: claude-code, codex, copilot, or acp."
 
 
-def _version_callback(value: bool) -> None:
-    if value:
-        typer.echo(__version__)
-        raise typer.Exit()
+class _AgexArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser used everywhere via ``parser_class=``.
 
-
-@app.callback()
-def main(
-    version: Optional[bool] = typer.Option(
-        None, "--version", callback=_version_callback, is_eager=True
-    ),
-) -> None:
-    """Root callback — exists only to hold the --version option.
-
-    Typer invokes the eager _version_callback before any subcommand
-    dispatch; there is nothing else to do at the app level.
+    argparse's native ``error()`` already prints usage to stderr and exits
+    with code 2 — which matches agex's existing bad-argument behavior — so no
+    override is required. The subclass exists only so nested subparsers inherit
+    it and to give a single place for any future tweak.
     """
 
 
-@app.command("explain")
-def explain(topic: str = typer.Argument(..., help="Topic to explain.")) -> None:
-    stdout, exit_code, stderr = explain_script.run(topic)
+# ---------------------------------------------------------------------------
+# Output helpers — preserve the exact newline behavior of the old typer.echo
+# calls. ``typer.echo(x, nl=False)`` wrote x verbatim; ``typer.echo(x)`` added
+# a newline; ``err=True`` selected stderr.
+# ---------------------------------------------------------------------------
+
+
+def _emit(stdout: str, stderr: str, *, stderr_newline: bool = True) -> None:
+    """Write a command's stdout/stderr the way the old CLI did."""
     if stdout:
-        typer.echo(stdout, nl=False)
+        sys.stdout.write(stdout)
     if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+        if stderr_newline:
+            print(stderr, file=sys.stderr)
+        else:
+            sys.stderr.write(stderr)
 
 
-@app.command("doctor")
-def doctor(
-    role: Optional[str] = typer.Option(
-        None, "--role", help="Render a role-specific check section (e.g., pr-review)."
-    ),
-) -> None:
-    stdout, exit_code, stderr = doctor_script.run(role)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+def _parse_backend_or_report(agent: Optional[str]):
+    """Parse ``--agent`` into a Backend.
 
-
-def _agent_option() -> Any:
-    return typer.Option(..., "--agent", help="Backend: claude-code, codex, copilot, or acp.")
-
-
-hook_app = typer.Typer(help="Write and read agex tracking events.", no_args_is_help=True)
-app.add_typer(hook_app, name="hook")
-
-
-@hook_app.command("write")
-def hook_write(
-    event: str = typer.Argument(..., help="Event name (e.g., post-tool-use)."),
-    args: list[str] = typer.Argument(None, help="Additional key=value pairs."),
-) -> None:
-    args = args or []
-    _, exit_code, stderr = hook_write_script.run(event, args)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-
-
-@hook_app.command("read")
-def hook_read(agent: str = _agent_option()) -> None:
-    try:
-        backend = parse_backend(agent)
-    except ValueError as e:
-        typer.echo(f"agex: error: {e}", err=True)
-        raise typer.Exit(code=2)
-    stdout, exit_code, stderr = hook_read_script.run(backend)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-
-
-pr_app = typer.Typer(name="pr", help="GitHub PR lifecycle commands.", no_args_is_help=True)
-app.add_typer(pr_app, name="pr")
-
-
-@pr_app.command("lint")
-def pr_lint(
-    agent: Optional[str] = typer.Option(
-        None, "--agent", help="Backend (claude-code|codex|copilot|acp); falls back to culture.yaml."
-    ),
-    exit_on_violation: bool = typer.Option(
-        False, "--exit-on-violation", help="Exit 1 when violations are found (CI mode)."
-    ),
-) -> None:
-    try:
-        stdout, exit_code, stderr = pr_lint_script.run(
-            agent=agent, project_dir=Path.cwd(), exit_on_violation=exit_on_violation
-        )
-    except ValueError as exc:
-        typer.echo(f"agex: {exc}", err=True)
-        raise typer.Exit(code=2)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-
-
-@pr_app.command("open")
-def pr_open(
-    title: str = typer.Option(..., "--title"),
-    body_file: Optional[Path] = typer.Option(None, "--body-file"),
-    draft: bool = typer.Option(False, "--draft"),
-    agent: Optional[str] = typer.Option(None, "--agent"),
-    delayed_read: bool = typer.Option(
-        False,
-        "--delayed-read",
-        help="After create, immediately run `pr read --wait 180`.",
-    ),
-) -> None:
-    try:
-        stdout, exit_code, stderr = pr_open_script.run(
-            agent=agent,
-            project_dir=Path.cwd(),
-            title=title,
-            body_file=body_file,
-            draft=draft,
-            delayed_read=delayed_read,
-        )
-    except ValueError as exc:
-        typer.echo(f"agex: {exc}", err=True)
-        raise typer.Exit(code=2)
-    except RuntimeError as exc:
-        typer.echo(str(exc), err=True)
-        typer.echo("agex: rerun 'agex pr open ...' once network is reachable", err=True)
-        raise typer.Exit(code=1)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-
-
-@pr_app.command("reply")
-def pr_reply(
-    pr: int = typer.Argument(...),
-    agent: Optional[str] = typer.Option(None, "--agent"),
-) -> None:
-    try:
-        stdout, exit_code, stderr = pr_reply_script.run(agent=agent, project_dir=Path.cwd(), pr=pr)
-    except ValueError as exc:
-        typer.echo(f"agex: {exc}", err=True)
-        raise typer.Exit(code=2)
-    except RuntimeError as exc:
-        typer.echo(str(exc), err=True)
-        typer.echo(_GH_RERUN_HINT, err=True)
-        raise typer.Exit(code=1)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True, nl=False)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-
-
-@pr_app.command("read")
-def pr_read(
-    pr: Optional[int] = typer.Argument(None),
-    wait: Optional[int] = typer.Option(
-        None, "--wait", help="Poll for readiness up to SECS seconds."
-    ),
-    agent: Optional[str] = typer.Option(None, "--agent"),
-) -> None:
-    try:
-        stdout, exit_code, stderr = pr_read_script.run(
-            agent=agent, project_dir=Path.cwd(), pr=pr, wait=wait
-        )
-    except ValueError as exc:
-        typer.echo(f"agex: {exc}", err=True)
-        raise typer.Exit(code=2)
-    except RuntimeError as exc:
-        typer.echo(str(exc), err=True)
-        typer.echo(_GH_RERUN_HINT, err=True)
-        raise typer.Exit(code=1)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-
-
-@pr_app.command("await")
-def pr_await(
-    pr: Optional[int] = typer.Argument(None),
-    max_wait: int = typer.Option(
-        1800, "--max-wait", help="Poll for readiness up to SECS seconds (default 1800)."
-    ),
-    agent: Optional[str] = typer.Option(None, "--agent"),
-) -> None:
-    """Wake-me-when-triage-able combo verb.
-
-    Polls readiness → runs CI + Sonar gate → renders briefing.  Exits
-    non-zero on quality-gate ERROR or unresolved review threads.
+    Returns ``(backend, None)`` on success, or ``(None, 2)`` after printing the
+    canonical ``agex: error: <msg>`` to stderr — letting the caller ``return``
+    the exit code without exception gymnastics.
     """
     try:
-        stdout, exit_code, stderr = pr_await_script.run(
-            agent=agent, project_dir=Path.cwd(), pr=pr, max_wait=max_wait
-        )
+        return parse_backend(agent), None
     except ValueError as exc:
-        typer.echo(f"agex: {exc}", err=True)
-        raise typer.Exit(code=2)
-    except RuntimeError as exc:
-        typer.echo(str(exc), err=True)
-        typer.echo(_GH_RERUN_HINT, err=True)
-        raise typer.Exit(code=1)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+        print(f"agex: error: {exc}", file=sys.stderr)
+        return None, 2
 
 
-@pr_app.command("delta")
-def pr_delta(
-    agent: Optional[str] = typer.Option(None, "--agent"),
-) -> None:
-    try:
-        stdout, exit_code, stderr = pr_delta_script.run(agent=agent, project_dir=Path.cwd())
-    except ValueError as exc:
-        typer.echo(f"agex: {exc}", err=True)
-        raise typer.Exit(code=2)
-    except RuntimeError as exc:
-        typer.echo(str(exc), err=True)
-        typer.echo(_GH_RERUN_HINT, err=True)
-        raise typer.Exit(code=1)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True, nl=False)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+# ---------------------------------------------------------------------------
+# Top-level command handlers
+# ---------------------------------------------------------------------------
 
 
-@app.command("learn")
-def learn(
-    topic: Optional[str] = typer.Argument(None, help="Lesson topic (omit for menu)."),
-    agent: str = _agent_option(),
-) -> None:
-    try:
-        backend = parse_backend(agent)
-    except ValueError as e:
-        typer.echo(f"agex: error: {e}", err=True)
-        raise typer.Exit(code=2)
-    if topic is None:
+def _cmd_explain(args: argparse.Namespace) -> int:
+    stdout, exit_code, stderr = explain_script.run(args.topic)
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    stdout, exit_code, stderr = doctor_script.run(args.role)
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_learn(args: argparse.Namespace) -> int:
+    backend, err = _parse_backend_or_report(args.agent)
+    if err is not None:
+        return err
+    if args.topic is None:
         stdout, exit_code, stderr = learn_script.run_menu(backend)
     else:
-        stdout, exit_code, stderr = learn_script.run_topic(topic, backend)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+        stdout, exit_code, stderr = learn_script.run_topic(args.topic, backend)
+    _emit(stdout, stderr)
+    return exit_code
 
 
-@app.command("gamify")
-def gamify(
-    agent: str = _agent_option(),
-    uninstall: bool = typer.Option(False, "--uninstall", help="Reverse gamify."),
-) -> None:
-    try:
-        backend = parse_backend(agent)
-    except ValueError as e:
-        typer.echo(f"agex: error: {e}", err=True)
-        raise typer.Exit(code=2)
-    if uninstall:
+def _cmd_gamify(args: argparse.Namespace) -> int:
+    backend, err = _parse_backend_or_report(args.agent)
+    if err is not None:
+        return err
+    if args.uninstall:
         stdout, exit_code, stderr = gamify_script.uninstall(backend)
     else:
         stdout, exit_code, stderr = gamify_script.install(backend)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+    _emit(stdout, stderr)
+    return exit_code
 
 
-@app.command("overview")
-def overview(agent: str = _agent_option()) -> None:
-    try:
-        backend = parse_backend(agent)
-    except ValueError as e:
-        typer.echo(f"agex: error: {e}", err=True)
-        raise typer.Exit(code=2)
+def _cmd_overview(args: argparse.Namespace) -> int:
+    backend, err = _parse_backend_or_report(args.agent)
+    if err is not None:
+        return err
     stdout, exit_code, stderr = overview_script.run(backend)
-    if stdout:
-        typer.echo(stdout, nl=False)
-    if stderr:
-        typer.echo(stderr, err=True)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
+    _emit(stdout, stderr)
+    return exit_code
 
 
-# Keep in sync with the @app.command / app.add_typer registrations above.
+# ---------------------------------------------------------------------------
+# hook subcommands
+# ---------------------------------------------------------------------------
+
+
+def _cmd_hook_write(args: argparse.Namespace) -> int:
+    _, exit_code, stderr = hook_write_script.run(args.event, args.args or [])
+    _emit("", stderr)
+    return exit_code
+
+
+def _cmd_hook_read(args: argparse.Namespace) -> int:
+    backend, err = _parse_backend_or_report(args.agent)
+    if err is not None:
+        return err
+    stdout, exit_code, stderr = hook_read_script.run(backend)
+    _emit(stdout, stderr)
+    return exit_code
+
+
+# ---------------------------------------------------------------------------
+# pr subcommands
+# ---------------------------------------------------------------------------
+
+
+def _cmd_pr_lint(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_lint_script.run(
+            agent=args.agent, project_dir=Path.cwd(), exit_on_violation=args.exit_on_violation
+        )
+    except ValueError as exc:
+        print(f"agex: {exc}", file=sys.stderr)
+        return 2
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_pr_open(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_open_script.run(
+            agent=args.agent,
+            project_dir=Path.cwd(),
+            title=args.title,
+            body_file=args.body_file,
+            draft=args.draft,
+            delayed_read=args.delayed_read,
+        )
+    except ValueError as exc:
+        print(f"agex: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        print("agex: rerun 'agex pr open ...' once network is reachable", file=sys.stderr)
+        return 1
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_pr_reply(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_reply_script.run(
+            agent=args.agent, project_dir=Path.cwd(), pr=args.pr
+        )
+    except ValueError as exc:
+        print(f"agex: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        print(_GH_RERUN_HINT, file=sys.stderr)
+        return 1
+    _emit(stdout, stderr, stderr_newline=False)
+    return exit_code
+
+
+def _cmd_pr_read(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_read_script.run(
+            agent=args.agent, project_dir=Path.cwd(), pr=args.pr, wait=args.wait
+        )
+    except ValueError as exc:
+        print(f"agex: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        print(_GH_RERUN_HINT, file=sys.stderr)
+        return 1
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_pr_await(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_await_script.run(
+            agent=args.agent, project_dir=Path.cwd(), pr=args.pr, max_wait=args.max_wait
+        )
+    except ValueError as exc:
+        print(f"agex: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        print(_GH_RERUN_HINT, file=sys.stderr)
+        return 1
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_pr_delta(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_delta_script.run(agent=args.agent, project_dir=Path.cwd())
+    except ValueError as exc:
+        print(f"agex: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        print(_GH_RERUN_HINT, file=sys.stderr)
+        return 1
+    _emit(stdout, stderr, stderr_newline=False)
+    return exit_code
+
+
+# ---------------------------------------------------------------------------
+# Parser construction
+# ---------------------------------------------------------------------------
+
+
+def _add_agent_option(parser: argparse.ArgumentParser, *, required: bool, help_text: str) -> None:
+    parser.add_argument("--agent", required=required, default=None, help=help_text)
+
+
+def _group_help(parser: argparse.ArgumentParser):
+    """Return a handler that prints a group's help to stderr and exits 2.
+
+    Mirrors Typer's ``no_args_is_help`` for ``agex hook`` / ``agex pr`` invoked
+    with no subcommand.
+    """
+
+    def _handle(_args: argparse.Namespace) -> int:
+        parser.print_help(sys.stderr)
+        return 2
+
+    return _handle
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = _AgexArgumentParser(
+        prog="agex",
+        description="Agent-operated developer-experience CLI.",
+    )
+    parser.add_argument("--version", action="version", version=__version__)
+    sub = parser.add_subparsers(dest="command", parser_class=_AgexArgumentParser)
+
+    # explain
+    p_explain = sub.add_parser("explain", help="Describe a command or concept.")
+    p_explain.add_argument("topic", help="Topic to explain.")
+    p_explain.set_defaults(func=_cmd_explain)
+
+    # doctor
+    p_doctor = sub.add_parser("doctor", help="Diagnose the project's agex setup.")
+    p_doctor.add_argument(
+        "--role", default=None, help="Render a role-specific check section (e.g., pr-review)."
+    )
+    p_doctor.set_defaults(func=_cmd_doctor)
+
+    # learn
+    p_learn = sub.add_parser("learn", help="Teach a lesson topic (or show the menu).")
+    p_learn.add_argument("topic", nargs="?", default=None, help="Lesson topic (omit for menu).")
+    _add_agent_option(p_learn, required=True, help_text=_AGENT_HELP)
+    p_learn.set_defaults(func=_cmd_learn)
+
+    # gamify
+    p_gamify = sub.add_parser("gamify", help="Install (or uninstall) gamification.")
+    _add_agent_option(p_gamify, required=True, help_text=_AGENT_HELP)
+    p_gamify.add_argument("--uninstall", action="store_true", help="Reverse gamify.")
+    p_gamify.set_defaults(func=_cmd_gamify)
+
+    # overview
+    p_overview = sub.add_parser("overview", help="Render the per-backend overview briefing.")
+    _add_agent_option(p_overview, required=True, help_text=_AGENT_HELP)
+    p_overview.set_defaults(func=_cmd_overview)
+
+    _register_hook(sub)
+    _register_pr(sub)
+
+    return parser
+
+
+def _register_hook(sub: argparse._SubParsersAction) -> None:
+    hook_p = sub.add_parser("hook", help="Write and read agex tracking events.")
+    hook_sub = hook_p.add_subparsers(dest="hook_command", parser_class=_AgexArgumentParser)
+
+    p_write = hook_sub.add_parser("write", help="Append a tracking event.")
+    p_write.add_argument("event", help="Event name (e.g., post-tool-use).")
+    p_write.add_argument("args", nargs="*", help="Additional key=value pairs.")
+    p_write.set_defaults(func=_cmd_hook_write)
+
+    p_read = hook_sub.add_parser("read", help="Render tracked events for a backend.")
+    _add_agent_option(p_read, required=True, help_text=_AGENT_HELP)
+    p_read.set_defaults(func=_cmd_hook_read)
+
+    hook_p.set_defaults(func=_group_help(hook_p))
+
+
+def _register_pr(sub: argparse._SubParsersAction) -> None:
+    pr_p = sub.add_parser("pr", help="GitHub PR lifecycle commands.")
+    pr_sub = pr_p.add_subparsers(dest="pr_command", parser_class=_AgexArgumentParser)
+
+    p_lint = pr_sub.add_parser("lint", help="Lint the PR branch state.")
+    _add_agent_option(
+        p_lint,
+        required=False,
+        help_text="Backend (claude-code|codex|copilot|acp); falls back to culture.yaml.",
+    )
+    p_lint.add_argument(
+        "--exit-on-violation",
+        action="store_true",
+        help="Exit 1 when violations are found (CI mode).",
+    )
+    p_lint.set_defaults(func=_cmd_pr_lint)
+
+    p_open = pr_sub.add_parser("open", help="Open a PR.")
+    p_open.add_argument("--title", required=True)
+    p_open.add_argument("--body-file", type=Path, default=None)
+    p_open.add_argument("--draft", action="store_true", default=False)
+    _add_agent_option(p_open, required=False, help_text=_AGENT_HELP)
+    p_open.add_argument(
+        "--delayed-read",
+        action="store_true",
+        default=False,
+        help="After create, immediately run `pr read --wait 180`.",
+    )
+    p_open.set_defaults(func=_cmd_pr_open)
+
+    p_reply = pr_sub.add_parser("reply", help="Reply to PR review threads.")
+    p_reply.add_argument("pr", type=int)
+    _add_agent_option(p_reply, required=False, help_text=_AGENT_HELP)
+    p_reply.set_defaults(func=_cmd_pr_reply)
+
+    p_read = pr_sub.add_parser("read", help="Read PR review state.")
+    p_read.add_argument("pr", type=int, nargs="?", default=None)
+    p_read.add_argument(
+        "--wait", type=int, default=None, help="Poll for readiness up to SECS seconds."
+    )
+    _add_agent_option(p_read, required=False, help_text=_AGENT_HELP)
+    p_read.set_defaults(func=_cmd_pr_read)
+
+    p_await = pr_sub.add_parser(
+        "await",
+        help="Wake-me-when-triage-able combo verb.",
+        description=(
+            "Polls readiness, runs CI + Sonar gate, renders briefing. Exits "
+            "non-zero on quality-gate ERROR or unresolved review threads."
+        ),
+    )
+    p_await.add_argument("pr", type=int, nargs="?", default=None)
+    p_await.add_argument(
+        "--max-wait",
+        type=int,
+        default=1800,
+        help="Poll for readiness up to SECS seconds (default 1800).",
+    )
+    _add_agent_option(p_await, required=False, help_text=_AGENT_HELP)
+    p_await.set_defaults(func=_cmd_pr_await)
+
+    p_delta = pr_sub.add_parser("delta", help="Show the delta since the last PR read.")
+    _add_agent_option(p_delta, required=False, help_text=_AGENT_HELP)
+    p_delta.set_defaults(func=_cmd_pr_delta)
+
+    pr_p.set_defaults(func=_group_help(pr_p))
+
+
+# ---------------------------------------------------------------------------
+# Dispatch + entrypoint
+# ---------------------------------------------------------------------------
+
+
+def _dispatch(args: argparse.Namespace) -> int:
+    rc = args.func(args)
+    return rc if rc is not None else 0
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    if getattr(args, "func", None) is None:
+        # No top-level command given — mirror Typer's no_args_is_help (exit 2).
+        parser.print_help(sys.stderr)
+        return 2
+    return _dispatch(args)
+
+
+# Keep in sync with the sub.add_parser registrations above.
 # If a new top-level command is added, extend this set so _main_entrypoint
 # stops routing it to the unknown-command fallback page.
 _KNOWN_COMMANDS = {"explain", "overview", "learn", "gamify", "hook", "doctor", "pr"}
@@ -347,15 +425,19 @@ def _main_entrypoint() -> None:
     """CLI entry point that routes unknown subcommands to ``agex explain agex``.
 
     When the first positional argument is not a known command (and is not a
-    flag), this function prints the ``agex explain agex`` page to stdout and
-    the canonical error message to stderr, then exits with code 2.  All other
-    invocations — known commands, ``--version``, ``--help``, zero-arg help —
-    fall through to the normal Typer ``app()`` dispatch unchanged.
+    flag), print the ``agex explain agex`` page to stdout and the canonical
+    error message to stderr, then exit with code 2.  All other invocations —
+    known commands, ``--version``, ``--help``, zero-arg help — fall through to
+    the normal ``main()`` dispatch unchanged.
     """
     argv = sys.argv[1:]
     if argv and not argv[0].startswith("-") and argv[0] not in _KNOWN_COMMANDS:
-        typer.echo(f"agex: error: unknown command '{argv[0]}'", err=True)
+        print(f"agex: error: unknown command '{argv[0]}'", file=sys.stderr)
         stdout, _, _ = explain_script.run("agex")
-        typer.echo(stdout, nl=False)
+        sys.stdout.write(stdout)
         sys.exit(2)
-    app()
+    sys.exit(main())
+
+
+if __name__ == "__main__":
+    _main_entrypoint()

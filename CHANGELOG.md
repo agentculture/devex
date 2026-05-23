@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-05-23
+
+### Changed
+
+- **Dropped the `typer` runtime dependency.** The CLI is now built on the
+  Python standard library's `argparse`, mirroring the sibling Culture repos
+  (`steward`, `devague`). This removes `typer`, `rich`, `shellingham`,
+  `annotated-doc`, `markdown-it-py`, `mdurl`, and `pygments` from the shipped
+  runtime closure (the wheel now depends only on `jinja2`, `pyyaml`,
+  `tomlkit`, and `portalocker`), shrinking the dependency-chain attack
+  surface. CLI behaviour is unchanged: every command, flag, exit code, and
+  stderr message is preserved, including the `agex explain agex`
+  unknown-command routing and the bare `--version` output.
+
 ## [0.19.0] - 2026-05-23
 
 ### Added
