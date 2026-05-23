@@ -162,6 +162,7 @@ def pr_comments(pr: int) -> list[dict[str, Any]]:
                 "id": c["id"],
                 "body": c["body"],
                 "author": c.get("user", {}).get("login", ""),
+                "html_url": c.get("html_url"),
                 "created_at": c.get("created_at"),
             }
         )

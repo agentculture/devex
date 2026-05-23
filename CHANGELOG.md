@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-05-23
+
+### Added
+
+- `agex pr read` (and `pr await`) now surface **Qodo code-review
+  findings** that Qodo posts inside collapsed `<details>` blocks of a
+  single top-level comment. A new `## Qodo review` section lists the
+  headline counts (🐞 Bugs / 📘 Rule violations / 📎 Requirement gaps)
+  and each finding's title + `file:line` + link, mirroring how inline
+  threads are shown. When counts are non-zero but no per-finding detail
+  could be parsed, the briefing flags it (`⚠️ N finding(s) in collapsed
+  Qodo review block — expand on GitHub`) so a bug is never silently
+  missed. Closes [#47](https://github.com/agentculture/agex-cli/issues/47).
+
+### Changed
+
+- Backend resolution accepts `claude` as an alias of `claude-code`, so
+  the AgentCulture-standard `culture.yaml` shape (`backend: claude`)
+  works with `agex pr` out of the box. When a `culture.yaml` backend is
+  genuinely unknown, the error now names the source, the offending agent
+  `suffix`, and the fix (e.g. `culture.yaml agent 'devague' has unknown
+  backend 'foo' / hint: expected one of claude (= claude-code), codex,
+  copilot, acp`). Closes [#46](https://github.com/agentculture/agex-cli/issues/46).
+
 ## [0.18.0] - 2026-05-12
 
 ### Added

@@ -16,7 +16,7 @@ from agent_experience.commands.pr.assets.rules.next_step_rules import (
     read_next_step,
     read_wait_timeout_step,
 )
-from agent_experience.commands.pr.scripts import _journal, _readiness, _sonar
+from agent_experience.commands.pr.scripts import _journal, _qodo, _readiness, _sonar
 from agent_experience.commands.pr.scripts._footer import render_footer
 from agent_experience.core import github
 from agent_experience.core.backend import resolve_backend
@@ -89,6 +89,7 @@ def run(
             pr_meta = github.pr_view(str(pr_number))
             checks = github.pr_checks(pr_number)
             comments = github.pr_comments(pr_number)
+            qodo = _qodo.parse(comments)
             footer_key, footer_ctx = read_wait_timeout_step(pr_number, waiting_for)
             footer = render_footer(footer_key, backend, footer_ctx)
             template = (
@@ -101,6 +102,7 @@ def run(
                     "pr_meta": pr_meta,
                     "checks": checks,
                     "comments": comments,
+                    "qodo": qodo,
                     "sonar_gate": None,
                     "sonar_issues": [],
                     "waiting_for": waiting_for,
@@ -113,6 +115,7 @@ def run(
     pr_meta = github.pr_view(str(pr_number))
     checks = github.pr_checks(pr_number)
     comments = github.pr_comments(pr_number)
+    qodo = _qodo.parse(comments)
     project_key = _sonar.project_key()
     sonar_gate = github.sonar_quality_gate(project_key, pr_number)
     sonar_issues = github.sonar_new_issues(project_key, pr_number)
@@ -148,6 +151,7 @@ def run(
             "pr_meta": pr_meta,
             "checks": checks,
             "comments": comments,
+            "qodo": qodo,
             "sonar_gate": sonar_gate,
             "sonar_issues": sonar_issues,
             "waiting_for": [],

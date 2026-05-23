@@ -1,0 +1,66 @@
+<h3>Code Review by Qodo</h3>
+
+<code>🐞 Bugs (2)</code>  <code>📘 Rule violations (1)</code>  <code>📎 Requirement gaps (0)</code>
+
+<img src="https://www.qodo.ai/wp-content/uploads/2025/11/light-grey-line.svg" height="10%" alt="Grey Divider">
+
+<br/>
+
+<details>
+<summary>  1.  Orphan honesty rendered <code>🐞 Bug</code> <code>≡ Correctness</code></summary>
+
+<br/>
+
+> <details open>
+><summary>Description</summary>
+><br/>
+>
+><pre>
+>_other_honesty() includes confirmed honesty conditions for non-requirement claims
+>without checking the parent claim is confirmed.
+></pre>
+></details>
+
+> <details open>
+><summary>Code</summary>
+><br/>
+>
+><code>[src/agent_experience/core/render.py[R42-55]](https://github.com/owner/repo/pull/24/files#diff-abc123R42-R55)</code>
+></details>
+
+> <details>
+><summary>Evidence</summary>
+><br/>
+>
+> <code>[src/agent_experience/core/render.py[8-16]](https://github.com/owner/repo/blob/900176330e6f2c191f5f90b5b4845600ea021053/src/agent_experience/core/render.py/#L8-L16)</code>
+></details>
+</details>
+
+<details>
+<summary>  2.  Encoding not passed to read_text <code>📘 Rule violation</code> <code>≡ Portability</code></summary>
+
+<br/>
+
+> <details open>
+><summary>Code</summary>
+><br/>
+>
+><code>[src/agent_experience/core/config.py[R10-12]](https://github.com/owner/repo/pull/24/files#diff-def456R10-R12)</code>
+></details>
+</details>
+
+<details>
+<summary>  3.  Missing edge-case note (no permalink) <code>🐞 Bug</code></summary>
+
+<br/>
+
+> <details open>
+><summary>Description</summary>
+><br/>
+>
+><pre>
+>A finding whose Code section did not resolve to a permalink — the title must
+>still surface even though there is no file:line.
+></pre>
+></details>
+</details>

@@ -15,11 +15,15 @@ def test_parse_backend_valid():
     assert parse_backend("codex") is Backend.CODEX
 
 
+def test_parse_backend_claude_alias():
+    assert parse_backend("claude") is Backend.CLAUDE_CODE
+
+
 def test_parse_backend_invalid_raises():
     with pytest.raises(ValueError) as exc:
         parse_backend("gemini")
     assert "gemini" in str(exc.value)
-    assert "claude-code" in str(exc.value)  # lists valid options
+    assert "claude (= claude-code)" in str(exc.value)  # lists valid options + alias
 
 
 def test_parse_backend_case_sensitive():
