@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-05-25
+
+### Added
+
+- **Vendored 9 new skills from the guildmaster canonical kit**
+  ([#58](https://github.com/agentculture/agex-cli/issues/58), cite-don't-import).
+  Canonical (upstream = `guildmaster`): `agent-config`, `doc-test-alignment`,
+  `pypi-maintainer`, `run-tests`, `sonarclaude`, `version-bump`. Inbound
+  workflow trio (origin = `devague`, re-broadcast via guildmaster): `think`,
+  `spec-to-plan`, `assign-to-workforce`. `doc-test-alignment` lands as a **stub**
+  (`scripts/check.sh` exits not-yet-implemented). `version-bump`, `sonarclaude`,
+  `pypi-maintainer`, `run-tests`, and `doc-test-alignment` get `type: command`
+  added to their frontmatter — agex-cli's `core.skill_loader` requires
+  `name`+`description`+`type`, and guildmaster ships those five without `type:`.
+
+### Changed
+
+- **Repointed skill provenance from steward to guildmaster** after the completed
+  steward → guildmaster supplier cutover. `cicd` and `communicate` `SKILL.md`
+  descriptions and `docs/skill-sources.md` now cite `guildmaster` as the
+  canonical upstream (the devague trio tracks `devague` as origin). No script
+  changes to either resynced skill — `cicd` keeps its adapted-thin `workflow.sh`
+  -only form (agex-cli owns `agex pr`); `communicate` stays identifier-only.
+  `docs/skill-sources.md` is restructured into the consumer-side mirror of
+  guildmaster's two-table supplier ledger.
+
+### Fixed
+
+- **Two patches to vendored scripts** flagged in the #59 Qodo review, recorded as
+  agex-cli divergences in `docs/skill-sources.md` (to be reported upstream to
+  guildmaster): `version-bump/scripts/bump.py` now inserts new releases *after*
+  the `[Unreleased]` section (upstream inserted before the first `## [`, placing
+  releases above Unreleased); `sonarclaude/scripts/sonar.sh` now also honors
+  `$SONAR_PROJECT_KEY` so it shares the same project-key config as the native
+  `agex pr` Sonar gate.
+
 ## [0.21.2] - 2026-05-24
 
 ### Changed

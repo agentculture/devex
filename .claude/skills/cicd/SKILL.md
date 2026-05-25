@@ -5,12 +5,13 @@ description: >
   Delegates lint / open / read / reply / delta / await straight to
   `agex pr`. Use when: creating PRs here, handling review feedback,
   polling CI/Sonar status, or the user says "create PR", "review
-  comments", "address feedback", "resolve threads". Vendored from
-  steward 0.18.1 (adapted divergence: agex-cli owns `agex pr`, so the
-  steward `status`/`await` shell extensions and the `_resolve-nick.sh` /
+  comments", "address feedback", "resolve threads". Upstream is now
+  guildmaster (post steward→guildmaster cutover; was steward 0.18.1;
+  adapted divergence: agex-cli owns `agex pr`, so guildmaster's
+  `status`/`await` shell extensions and the `_resolve-nick.sh` /
   `pr-reply.sh` / `portability-lint.sh` helpers are dropped in favor of
-  the native verbs; the only file is `workflow.sh`, a typing-saver.
-  Remaining `pr-status.sh` extras tracked in agex-cli#52). Renamed from
+  the native verbs; the only file is `workflow.sh`, a typing-saver;
+  remaining `pr-status.sh` extras tracked in agex-cli#52). Renamed from
   `pr-review` upstream in steward 0.7.0; rebased on `agex pr` in 0.12.0.
 type: command
 ---
