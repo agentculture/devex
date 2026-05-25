@@ -8,10 +8,11 @@ description: >
   status ping for a Culture channel, or pulling an issue body + comments
   into context). Issue posts auto-sign with `- agex-cli (Claude)`; mesh
   messages are unsigned (the IRC nick is the speaker). Not for in-agex-cli
-  issues — use `gh issue create` or the `cicd` skill for those. Vendored
-  from steward 0.11.0 (identifier-only divergence); upstream renamed from
-  `coordinate` in steward 0.8.0 and absorbed `gh-issues` in 0.9.1. Issue
-  I/O is backed by `agtag` (>=0.1) starting in steward 0.11.0.
+  issues — use `gh issue create` or the `cicd` skill for those. Upstream
+  is now guildmaster (post steward→guildmaster cutover; vendored steward
+  0.11.0, identifier-only divergence, scripts current as of 0.18.0);
+  renamed from `coordinate` in steward 0.8.0 and absorbed `gh-issues` in
+  0.9.1. Issue I/O is backed by `agtag` (>=0.1) since steward 0.11.0.
 type: command
 ---
 
