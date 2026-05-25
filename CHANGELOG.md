@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Two patches to vendored scripts** flagged in the #59 Qodo review, recorded as
-  agex-cli divergences in `docs/skill-sources.md` (and reported upstream to
+  agex-cli divergences in `docs/skill-sources.md` (to be reported upstream to
   guildmaster): `version-bump/scripts/bump.py` now inserts new releases *after*
   the `[Unreleased]` section (upstream inserted before the first `## [`, placing
   releases above Unreleased); `sonarclaude/scripts/sonar.sh` now also honors
