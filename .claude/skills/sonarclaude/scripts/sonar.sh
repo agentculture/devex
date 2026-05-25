@@ -3,12 +3,15 @@ set -euo pipefail
 
 # SonarCloud API client for Claude Code.
 # Requires SONAR_TOKEN environment variable.
-# Project key resolves from --project flag, then $SONAR_PROJECT.
+# Project key resolves from --project flag, then $SONAR_PROJECT, then
+# $SONAR_PROJECT_KEY (agex-cli's native `agex pr` env var — kept compatible
+# so both tools read the same config; agex-cli divergence, see
+# docs/skill-sources.md).
 
 BASE_URL="https://sonarcloud.io"
 
 # --- Defaults ---
-PROJECT="${SONAR_PROJECT:-}"
+PROJECT="${SONAR_PROJECT:-${SONAR_PROJECT_KEY:-}}"
 SEVERITY=""
 TYPE=""
 LIMIT=25

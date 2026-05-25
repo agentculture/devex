@@ -128,6 +128,13 @@ def update_changelog(project_root: Path, new: str, entries: dict) -> None:
 
     marker = "## ["
     idx = text.find(marker)
+    # Keep-a-Changelog repos lead with a "## [Unreleased]" section; the new
+    # release must land *after* it, before the first versioned heading. (agex-cli
+    # divergence from the upstream verbatim copy — see docs/skill-sources.md.)
+    if idx >= 0 and text[idx:].startswith("## [Unreleased]"):
+        nxt = text.find(marker, idx + len(marker))
+        if nxt > 0:
+            idx = nxt
     if idx > 0:
         changelog.write_text(text[:idx] + new_entry + text[idx:])
         print(f"Updated CHANGELOG.md with [{new}]")

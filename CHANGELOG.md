@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/skill-sources.md` is restructured into the consumer-side mirror of
   guildmaster's two-table supplier ledger.
 
+### Fixed
+
+- **Two patches to vendored scripts** flagged in the #59 Qodo review, recorded as
+  agex-cli divergences in `docs/skill-sources.md` (and reported upstream to
+  guildmaster): `version-bump/scripts/bump.py` now inserts new releases *after*
+  the `[Unreleased]` section (upstream inserted before the first `## [`, placing
+  releases above Unreleased); `sonarclaude/scripts/sonar.sh` now also honors
+  `$SONAR_PROJECT_KEY` so it shares the same project-key config as the native
+  `agex pr` Sonar gate.
+
 ## [0.21.2] - 2026-05-24
 
 ### Changed
