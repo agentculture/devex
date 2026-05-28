@@ -7,7 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from agent_experience.commands.pr.assets.rules.next_step_rules import open_next_step
-from agent_experience.commands.pr.scripts import _journal
+from agent_experience.commands.pr.scripts import _journal, review
 from agent_experience.commands.pr.scripts._footer import render_footer
 from agent_experience.core import github
 from agent_experience.core.backend import resolve_backend
@@ -55,6 +55,14 @@ def run(
         was_already_open = False
         _journal.append({"type": "pr_opened", "pr": pr, "title": title})
 
+    # Auto-post the Qodo agentic-review trigger out of the box for a freshly
+    # created, non-draft PR.  Skipped for drafts (not review-ready yet — use
+    # `pr review` to trigger later) and for already-open PRs (idempotent
+    # re-opens shouldn't spam the thread).
+    review_posted = not was_already_open and not draft
+    if review_posted:
+        review.post_trigger(pr)
+
     footer_key, footer_ctx = open_next_step(pr, was_already_open)
     footer = render_footer(footer_key, backend, footer_ctx)
 
@@ -68,6 +76,8 @@ def run(
             "signed": signed,
             "draft": draft,
             "was_already_open": was_already_open,
+            "review_posted": review_posted,
+            "review_command": review.QODO_REVIEW_TRIGGER,
             "footer": footer,
         },
     )

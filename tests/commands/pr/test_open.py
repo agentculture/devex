@@ -6,6 +6,7 @@ from agent_experience.core import github
 def _patch(monkeypatch, *, view_returns, create_returns_pr=42, captured=None):
     if captured is None:
         captured = {}
+    captured.setdefault("posts", [])
     monkeypatch.setattr(github, "pr_view", lambda branch=None: view_returns)
     monkeypatch.setattr(github, "resolve_nick", lambda d: "agex-cli")
 
@@ -15,7 +16,12 @@ def _patch(monkeypatch, *, view_returns, create_returns_pr=42, captured=None):
         captured["draft"] = draft
         return create_returns_pr
 
+    def fake_post(pr, body, in_reply_to):
+        captured["posts"].append({"pr": pr, "body": body, "in_reply_to": in_reply_to})
+        return 1000 + len(captured["posts"])
+
     monkeypatch.setattr(github, "pr_create", fake_create)
+    monkeypatch.setattr(github, "pr_post_comment", fake_post)
     return captured
 
 
@@ -121,6 +127,65 @@ def test_pr_open_draft_flag(monkeypatch, tmp_path, capsys):
     )
     capsys.readouterr()
     assert captured["draft"] is True
+
+
+def test_pr_open_auto_posts_agentic_review(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    captured = _patch(monkeypatch, view_returns=None)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("b\n", encoding="utf-8")
+    code = cli.main(
+        ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
+    )
+    out = capsys.readouterr()
+    assert code == 0
+    # Exactly one auto-posted trigger, top-level, with the non-deprecated command.
+    assert captured["posts"] == [{"pr": 42, "body": "/agentic_review", "in_reply_to": None}]
+    assert "/agentic_review" in out.out
+    assert "/improve" not in out.out
+    # Journal records the trigger alongside pr_opened.
+    events = _journal.load()
+    assert "pr_review_triggered" in [e["type"] for e in events]
+
+
+def test_pr_open_draft_does_not_post_trigger(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    captured = _patch(monkeypatch, view_returns=None)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("b\n", encoding="utf-8")
+    cli.main(
+        [
+            "pr",
+            "open",
+            "--agent",
+            "claude-code",
+            "--title",
+            "t",
+            "--body-file",
+            str(body_file),
+            "--draft",
+        ]
+    )
+    capsys.readouterr()
+    assert captured["posts"] == []
+
+
+def test_pr_open_already_open_does_not_post_trigger(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    posts: list = []
+    monkeypatch.setattr(github, "pr_view", lambda branch=None: {"number": 7, "state": "OPEN"})
+    monkeypatch.setattr(github, "resolve_nick", lambda d: "agex-cli")
+    monkeypatch.setattr(github, "pr_create", lambda **kw: 999)
+    monkeypatch.setattr(
+        github, "pr_post_comment", lambda pr, body, in_reply_to: posts.append(body) or 1
+    )
+    body_file = tmp_path / "body.md"
+    body_file.write_text("b\n", encoding="utf-8")
+    cli.main(
+        ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
+    )
+    capsys.readouterr()
+    assert posts == []
 
 
 def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path, capsys):

@@ -9,5 +9,6 @@ PR opened: **#{{ pr }}**{% if url %} ({{ url }}){% endif %}.
 - Title: `{{ title }}`
 - Signed: {{ "yes" if signed else "no" }}
 - Draft: {{ "yes" if draft else "no" }}
-
+{% if review_posted %}- Posted `{{ review_command }}` to start a Qodo agentic review.
+{% endif %}
 {{ footer }}

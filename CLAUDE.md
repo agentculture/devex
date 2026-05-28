@@ -19,7 +19,7 @@ Read the spec before any non-trivial change — the design invariants below are 
 1. **Zero LLM calls inside agex.** All output is deterministic markdown from Jinja templates + Python.
 2. **Markdown is the only output format.** No `--json` flag.
 3. **`--agent <backend>` is required** on backend-sensitive commands. The CLI never auto-detects.
-4. **Side effects only in** `gamify`, `gamify --uninstall`, `hook write`, `pr open`, `pr reply`, `pr read` (journal writes), and first-run `.agex/` init. Everything else is read-only. The `agex pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants.
+4. **Side effects only in** `gamify`, `gamify --uninstall`, `hook write`, `pr open`, `pr reply`, `pr review`, `pr read` (journal writes), and first-run `.agex/` init. Everything else is read-only. The `agex pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants.
 5. **"Unsupported" is success** — exit 0 with a markdown notice that links to the issue tracker, not a non-zero exit.
 6. **Skills are authored by the agent, not shipped by agex.** `agex learn <topic>` teaches; `agex explain <topic>` describes; agex never writes a user skill file on the agent's behalf in v0.1.
 
@@ -43,7 +43,7 @@ cli.py ──► commands/<name>/scripts/<name>.py ──► core/render.py
 
 ## `agex pr` namespace (v0.17.0+)
 
-`lint`, `open`, `read`, `reply`, `delta`. Each command ends with a deterministic "Next step:" footer. The `pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants. Key modules:
+`lint`, `open`, `read`, `reply`, `review`, `await`, `delta`. Each command ends with a deterministic "Next step:" footer. The `pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants. `pr open` (non-draft, new PR) and `pr review` post the Qodo `/agentic_review` trigger comment; the legacy `/improve` is deprecated and never emitted. The trigger string lives in one place: `commands/pr/scripts/review.QODO_REVIEW_TRIGGER`. Key modules:
 
 - `core/github.py` — thin `gh` shellout wrapper; future zero-trust httpx swap touches only this file.
 - `core/journal.py` — nested-stream JSONL append/load for `.agex/data/<dir>/<stream>.jsonl`.

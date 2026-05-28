@@ -70,5 +70,9 @@ def reply_next_step(pr: int, failure_count: int) -> tuple[str, dict[str, Any]]:
     return "reply_clean", {"pr": pr}
 
 
+def review_next_step(pr: int) -> tuple[str, dict[str, Any]]:
+    return "review_posted", {"pr": pr}
+
+
 def delta_next_step() -> tuple[str, dict[str, Any]]:
     return "delta_done", {}
