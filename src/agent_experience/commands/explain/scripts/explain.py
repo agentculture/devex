@@ -2,6 +2,7 @@ import re
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 
+from agent_experience.core.prog import error_prefix
 from agent_experience.core.skill_loader import Skill, load_skill
 
 _TOPIC_RE = re.compile(r"^[a-z][a-z0-9-]*$")
@@ -54,7 +55,7 @@ def run(topic: str) -> tuple[str, int, str]:
     if resolved is None:
         agex_page = _commands_root().joinpath("explain", "assets", "topics", "agex.md")
         body = agex_page.read_text(encoding="utf-8") if agex_page.is_file() else ""
-        return (body, 2, f"agex: error: unknown topic '{topic}'")
+        return (body, 2, error_prefix(f"unknown topic '{topic}'"))
 
     kind, trav = resolved
     if kind == "concept":

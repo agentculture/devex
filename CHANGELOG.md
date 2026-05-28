@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Repo renamed `agentculture/agex-cli` → `agentculture/devex`; updated in-code issue/repo URLs, README, CLAUDE.md, and the publish workflow OIDC setup notes.
 - SonarCloud project key → `agentculture_devex` (display name `devex`; organization unchanged).
 
+### Fixed
+
+- "Output follows invocation" now also covers **plain-string** stdout/stderr in command scripts (`explain`/`learn`/`hook`/`doctor`/`gamify`/`pr delta`/`pr reply` error prefixes, status lines, and command examples), not just Jinja-rendered templates — added `core.prog.error_prefix()` and routed those paths through `prog_name()` (agex-cli#61 Qodo review).
+- `prog_name()` now strips entry-point wrapper suffixes (`.exe`, `.py`, `-script`) before matching, so a real `devex` invocation via the Windows console script `devex.exe` no longer falls back to `agex` (agex-cli#61 Qodo review).
+
 ## [0.22.0] - 2026-05-25
 
 ### Added

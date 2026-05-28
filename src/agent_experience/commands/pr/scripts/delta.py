@@ -11,6 +11,7 @@ from agent_experience.commands.pr.assets.rules.next_step_rules import delta_next
 from agent_experience.commands.pr.scripts._footer import render_footer
 from agent_experience.core import config as cfg_mod
 from agent_experience.core.backend import resolve_backend
+from agent_experience.core.prog import prog_name
 from agent_experience.core.render import render_string
 
 _TEMPLATES_PKG = "agent_experience.commands.pr.assets.templates"
@@ -56,13 +57,14 @@ def run(agent: str | None, project_dir: Path) -> tuple[str, int, str]:
     claude_md_lines = _claude_md_lines()
 
     if siblings is None:
+        prog = prog_name()
         stdout = (
-            "# `agex pr delta`\n\n"
+            f"# `{prog} pr delta`\n\n"
             "No `.claude/skills.local.yaml` found.  Copy "
             "`.claude/skills.local.yaml.example` and fill `sibling_projects`.\n"
         )
         stderr = (
-            "agex: copy .claude/skills.local.yaml.example to "
+            f"{prog}: copy .claude/skills.local.yaml.example to "
             ".claude/skills.local.yaml and fill sibling_projects\n"
         )
         return stdout, 0, stderr
