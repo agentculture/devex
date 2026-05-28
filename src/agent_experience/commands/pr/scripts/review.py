@@ -16,7 +16,6 @@ from pathlib import Path
 from agent_experience.commands.pr.assets.rules.next_step_rules import review_next_step
 from agent_experience.commands.pr.scripts import _journal
 from agent_experience.commands.pr.scripts._footer import render_footer
-from agent_experience.commands.pr.scripts.read import _resolve_pr
 from agent_experience.core import github
 from agent_experience.core.backend import resolve_backend
 from agent_experience.core.render import render_string
@@ -41,7 +40,7 @@ def post_trigger(pr: int) -> int:
 
 def run(agent: str | None, project_dir: Path, pr: int | None) -> tuple[str, int, str]:
     backend = resolve_backend(agent, project_dir)
-    pr_number = _resolve_pr(pr)
+    pr_number = github.resolve_pr_number(pr)
 
     post_trigger(pr_number)
 

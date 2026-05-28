@@ -29,15 +29,6 @@ from agent_experience.core.render import render_string
 _TEMPLATES_PKG = "agent_experience.commands.pr.assets.templates"
 
 
-def _resolve_pr(pr: int | None) -> int:
-    if pr is not None:
-        return pr
-    view = github.pr_view(None)
-    if view is None:
-        raise ValueError("no PR found for current branch; pass <PR> explicitly")
-    return int(view["number"])
-
-
 def _gate_status(gate: Mapping[str, Any] | None) -> str | None:
     """Normalized SonarCloud quality-gate status, or None when there's no gate.
 
@@ -57,7 +48,7 @@ def run(
     max_wait: int,
 ) -> tuple[str, int, str]:
     backend = resolve_backend(agent, project_dir)
-    pr_number = _resolve_pr(pr)
+    pr_number = github.resolve_pr_number(pr)
 
     waited_secs = 0
     waiting_for: list[str] = []

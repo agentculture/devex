@@ -188,6 +188,31 @@ def test_pr_open_already_open_does_not_post_trigger(monkeypatch, tmp_path, capsy
     assert posts == []
 
 
+def test_pr_open_survives_trigger_post_failure(monkeypatch, tmp_path, capsys):
+    # PR creation is the primary side effect; a failed trigger post must not
+    # abort the command (which would tell the user to rerun `pr open` and skip
+    # the trigger forever). Exit 0, PR reported open, and point at `pr review`.
+    monkeypatch.chdir(tmp_path)
+    _patch(monkeypatch, view_returns=None)
+
+    def boom(pr, body, in_reply_to):
+        raise RuntimeError("gh failed: network unreachable")
+
+    monkeypatch.setattr(github, "pr_post_comment", boom)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("b\n", encoding="utf-8")
+    code = cli.main(
+        ["pr", "open", "--agent", "claude-code", "--title", "t", "--body-file", str(body_file)]
+    )
+    out = capsys.readouterr()
+    assert code == 0
+    assert "PR opened" in out.out
+    assert "#42" in out.out
+    # Surfaces the recovery path without claiming the trigger was posted.
+    assert "pr review 42" in out.out
+    assert "Posted `/agentic_review`" not in out.out
+
+
 def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _patch(monkeypatch, view_returns=None)

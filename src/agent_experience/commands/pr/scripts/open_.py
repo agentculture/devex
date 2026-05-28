@@ -59,9 +59,20 @@ def run(
     # created, non-draft PR.  Skipped for drafts (not review-ready yet — use
     # `pr review` to trigger later) and for already-open PRs (idempotent
     # re-opens shouldn't spam the thread).
-    review_posted = not was_already_open and not draft
-    if review_posted:
-        review.post_trigger(pr)
+    #
+    # The trigger post is best-effort: PR creation is the primary side effect
+    # and has already succeeded, so a transient `gh` failure here must NOT abort
+    # the command (which would tell the user to rerun `pr open`, only to skip
+    # the trigger forever as an already-open PR).  On failure we keep exit 0 and
+    # point the user at `pr review` to retry just the trigger.
+    review_posted = False
+    review_failed = False
+    if not was_already_open and not draft:
+        try:
+            review.post_trigger(pr)
+            review_posted = True
+        except RuntimeError:
+            review_failed = True
 
     footer_key, footer_ctx = open_next_step(pr, was_already_open)
     footer = render_footer(footer_key, backend, footer_ctx)
@@ -77,6 +88,7 @@ def run(
             "draft": draft,
             "was_already_open": was_already_open,
             "review_posted": review_posted,
+            "review_failed": review_failed,
             "review_command": review.QODO_REVIEW_TRIGGER,
             "footer": footer,
         },

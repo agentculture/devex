@@ -93,6 +93,21 @@ def pr_view(pr_or_branch: str | None) -> dict[str, Any] | None:
     return json.loads(stdout)
 
 
+def resolve_pr_number(pr: int | None) -> int:
+    """Return ``pr`` if given, else the open PR number for the current branch.
+
+    Raises ``ValueError`` when no number is given and the branch has no PR —
+    the shared resolution used by every `agex pr` verb that takes an optional
+    ``<PR>`` positional (``read``, ``await``, ``review``).
+    """
+    if pr is not None:
+        return pr
+    view = pr_view(None)
+    if view is None:
+        raise ValueError("no PR found for current branch; pass <PR> explicitly")
+    return int(view["number"])
+
+
 def _repo_slug() -> str:
     """Return 'owner/repo' from `gh repo view --json owner,name`."""
     out = _run_gh(["repo", "view", "--json", "owner,name"])
