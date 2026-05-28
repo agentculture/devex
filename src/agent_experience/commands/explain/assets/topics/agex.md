@@ -34,4 +34,4 @@ agex overview --agent claude-code  # what's in this project?
 
 ## Repo
 
-<https://github.com/agentculture/agex-cli>
+<https://github.com/agentculture/devex>

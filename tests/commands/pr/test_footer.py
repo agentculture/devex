@@ -31,6 +31,22 @@ def test_unknown_rule_key_raises():
         render_footer("nonexistent_rule", Backend.CLAUDE_CODE, {})
 
 
+def test_footer_follows_invoked_command_name(monkeypatch):
+    # When invoked as `devex`, the footer hint must say `devex pr ...` rather
+    # than the canonical `agex` — the `{{ prog }}` template var resolves from
+    # sys.argv[0] via core.prog.prog_name().
+    monkeypatch.setattr("sys.argv", ["/usr/local/bin/devex", "pr", "open"])
+    out = render_footer("open_recommend_read", Backend.CLAUDE_CODE, {"pr": 42})
+    assert "devex pr read 42 --wait 180" in out
+    assert "agex" not in out
+
+
+def test_footer_defaults_to_agex_without_devex_invocation(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["agex", "pr", "open"])
+    out = render_footer("open_recommend_read", Backend.CLAUDE_CODE, {"pr": 42})
+    assert "agex pr read 42 --wait 180" in out
+
+
 def test_footer_does_not_double_escape_quotes():
     # Regression: render_string autoescape used to escape `"` to `&#34;`,
     # then the second pass escaped it again to `&amp;#34;`.

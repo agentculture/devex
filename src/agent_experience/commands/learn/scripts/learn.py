@@ -3,6 +3,7 @@ from importlib.resources import as_file, files
 from importlib.resources.abc import Traversable
 
 from agent_experience.core.backend import Backend
+from agent_experience.core.prog import error_prefix
 from agent_experience.core.render import render_string
 from agent_experience.core.skill_loader import Skill, load_skill
 
@@ -54,13 +55,13 @@ def run_topic(topic: str, backend: Backend) -> tuple[str, int, str]:
     """Return (stdout, exit_code, stderr) for a specific lesson topic."""
     if not _TOPIC_RE.match(topic):
         menu_out, _, _ = run_menu(backend)
-        return (menu_out, 2, f"agex: error: unknown topic '{topic}'")
+        return (menu_out, 2, error_prefix(f"unknown topic '{topic}'"))
 
     topic_dir = _learn_assets().joinpath("topics", topic)
     skill_md = topic_dir.joinpath(_SKILL_FILENAME)
     if not skill_md.is_file():
         menu_out, _, _ = run_menu(backend)
-        return (menu_out, 2, f"agex: error: unknown topic '{topic}'")
+        return (menu_out, 2, error_prefix(f"unknown topic '{topic}'"))
 
     skill = _load_skill_from_traversable(skill_md)
     template_path = topic_dir.joinpath("assets", "skill-template", backend.value, _SKILL_FILENAME)

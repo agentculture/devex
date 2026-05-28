@@ -1,4 +1,4 @@
-# `agex pr lint`
+# `{{ prog }} pr lint`
 
 {% if violations %}
 **{{ violations | length }} violation(s) found:**
@@ -13,7 +13,7 @@ No violations.
 {% endif %}
 
 {% if alignment_triggered -%}
-> ℹ️ This change touches alignment files (`CLAUDE.md`, `culture.yaml`, or `.claude/skills/`). Run `agex pr delta` before opening the PR.
+> ℹ️ This change touches alignment files (`CLAUDE.md`, `culture.yaml`, or `.claude/skills/`). Run `{{ prog }} pr delta` before opening the PR.
 {%- endif %}
 
 {{ footer }}

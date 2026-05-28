@@ -28,9 +28,14 @@ from agent_experience.commands.pr.scripts import open_ as pr_open_script
 from agent_experience.commands.pr.scripts import read as pr_read_script
 from agent_experience.commands.pr.scripts import reply as pr_reply_script
 from agent_experience.core.backend import parse_backend
+from agent_experience.core.prog import prog_name
 
-_GH_RERUN_HINT = "agex: rerun once network is reachable (gh failed)"
 _AGENT_HELP = "Backend: claude-code, codex, copilot, or acp."
+
+
+def _gh_rerun_hint() -> str:
+    """``<prog>: rerun once network is reachable`` — phrased with the invoked name."""
+    return f"{prog_name()}: rerun once network is reachable (gh failed)"
 
 
 class _AgexArgumentParser(argparse.ArgumentParser):
@@ -71,7 +76,7 @@ def _parse_backend_or_report(agent: Optional[str]):
     try:
         return parse_backend(agent), None
     except ValueError as exc:
-        print(f"agex: error: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: error: {exc}", file=sys.stderr)
         return None, 2
 
 
@@ -156,7 +161,7 @@ def _cmd_pr_lint(args: argparse.Namespace) -> int:
             agent=args.agent, project_dir=Path.cwd(), exit_on_violation=args.exit_on_violation
         )
     except ValueError as exc:
-        print(f"agex: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
     _emit(stdout, stderr)
     return exit_code
@@ -173,11 +178,12 @@ def _cmd_pr_open(args: argparse.Namespace) -> int:
             delayed_read=args.delayed_read,
         )
     except ValueError as exc:
-        print(f"agex: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
     except RuntimeError as exc:
+        prog = prog_name()
         print(str(exc), file=sys.stderr)
-        print("agex: rerun 'agex pr open ...' once network is reachable", file=sys.stderr)
+        print(f"{prog}: rerun '{prog} pr open ...' once network is reachable", file=sys.stderr)
         return 1
     _emit(stdout, stderr)
     return exit_code
@@ -189,11 +195,11 @@ def _cmd_pr_reply(args: argparse.Namespace) -> int:
             agent=args.agent, project_dir=Path.cwd(), pr=args.pr
         )
     except ValueError as exc:
-        print(f"agex: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
-        print(_GH_RERUN_HINT, file=sys.stderr)
+        print(_gh_rerun_hint(), file=sys.stderr)
         return 1
     _emit(stdout, stderr, stderr_newline=False)
     return exit_code
@@ -205,11 +211,11 @@ def _cmd_pr_read(args: argparse.Namespace) -> int:
             agent=args.agent, project_dir=Path.cwd(), pr=args.pr, wait=args.wait
         )
     except ValueError as exc:
-        print(f"agex: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
-        print(_GH_RERUN_HINT, file=sys.stderr)
+        print(_gh_rerun_hint(), file=sys.stderr)
         return 1
     _emit(stdout, stderr)
     return exit_code
@@ -221,11 +227,11 @@ def _cmd_pr_await(args: argparse.Namespace) -> int:
             agent=args.agent, project_dir=Path.cwd(), pr=args.pr, max_wait=args.max_wait
         )
     except ValueError as exc:
-        print(f"agex: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
-        print(_GH_RERUN_HINT, file=sys.stderr)
+        print(_gh_rerun_hint(), file=sys.stderr)
         return 1
     _emit(stdout, stderr)
     return exit_code
@@ -235,11 +241,11 @@ def _cmd_pr_delta(args: argparse.Namespace) -> int:
     try:
         stdout, exit_code, stderr = pr_delta_script.run(agent=args.agent, project_dir=Path.cwd())
     except ValueError as exc:
-        print(f"agex: {exc}", file=sys.stderr)
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
-        print(_GH_RERUN_HINT, file=sys.stderr)
+        print(_gh_rerun_hint(), file=sys.stderr)
         return 1
     _emit(stdout, stderr, stderr_newline=False)
     return exit_code
@@ -270,7 +276,7 @@ def _group_help(parser: argparse.ArgumentParser):
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = _AgexArgumentParser(
-        prog="agex",
+        prog=prog_name(),
         description="Agent-operated developer-experience CLI.",
     )
     parser.add_argument("--version", action="version", version=__version__)
@@ -441,7 +447,9 @@ def _main_entrypoint() -> None:
     """
     argv = sys.argv[1:]
     if argv and not argv[0].startswith("-") and argv[0] not in _KNOWN_COMMANDS:
-        print(f"agex: error: unknown command '{argv[0]}'", file=sys.stderr)
+        print(f"{prog_name()}: error: unknown command '{argv[0]}'", file=sys.stderr)
+        # `agex` here is the explain-topic identifier (topics/agex.md), not the
+        # invoked command name — the canonical "what is this tool" page.
         stdout, _, _ = explain_script.run("agex")
         sys.stdout.write(stdout)
         sys.exit(2)

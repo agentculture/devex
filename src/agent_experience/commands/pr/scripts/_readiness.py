@@ -9,6 +9,7 @@ from typing import Any
 
 from agent_experience.core import config as cfg_mod
 from agent_experience.core import github
+from agent_experience.core.prog import prog_name
 
 DEFAULT_REVIEWERS = ["qodo"]
 POLL_INTERVAL_SEC = 60
@@ -32,7 +33,10 @@ def heartbeat(label: str, pr: int, waited_secs: int, ready: bool, waiting_for: l
     "satisfied on entry; never polled" apart from "polled and it became ready
     instantly".
     """
-    line = f"agex: {label}: pr={pr} waited={waited_secs}s ready={ready} waiting_for={waiting_for}"
+    line = (
+        f"{prog_name()}: {label}: pr={pr} waited={waited_secs}s "
+        f"ready={ready} waiting_for={waiting_for}"
+    )
     if ready and waited_secs == 0:
         line += " (readiness already satisfied on entry; not polling)"
     return line + "\n"

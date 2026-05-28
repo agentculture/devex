@@ -1,6 +1,6 @@
 # Lessons — {{ backend }}
 
-Run `agex learn <topic> --agent {{ backend }}` to learn one.
+Run `{{ prog }} learn <topic> --agent {{ backend }}` to learn one.
 
 {% for topic in topics -%}
 - **`{{ topic.name }}`** — {{ topic.description }}{% if topic.unsupported %} _(unsupported on {{ backend }}: {{ topic.unsupported }})_{% endif %}

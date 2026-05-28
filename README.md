@@ -1,13 +1,13 @@
 # agex
 
-Agent-operated developer-experience CLI. Non-agentic, deterministic, markdown-first. Distributed on PyPI as `agex-cli`; installs the `agex` command.
+Agent-operated developer-experience CLI. Non-agentic, deterministic, markdown-first. The same wheel is published on PyPI under three distribution names — `agex-cli` (canonical), `agent-devex`, and `devex-cli` — and installs two equivalent commands, `agex` and `devex` (emitted output reflects whichever name you invoke).
 
 ## Install
 
 ```bash
-uv tool install agex-cli
+uv tool install agex-cli      # or: devex-cli
 # or
-pipx install agex-cli
+pipx install agex-cli         # or: pipx install devex-cli
 ```
 
 ## Quick start

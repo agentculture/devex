@@ -15,7 +15,7 @@ from agent_experience.core.paths import data_dir
 # On Windows, portalocker uses msvcrt.locking() which can raise EDEADLK
 # (mapped to AlreadyLocked) when two writers race for the same append lock.
 # A handful of short retries is sufficient because the other writer releases
-# within microseconds. See https://github.com/agentculture/agex-cli/issues/12.
+# within microseconds. See https://github.com/agentculture/devex/issues/12.
 _LOCK_MAX_ATTEMPTS = 5  # total attempts before giving up
 _LOCK_BASE_SLEEP_SEC = 0.01  # 10ms base backoff (writes complete in microseconds)
 

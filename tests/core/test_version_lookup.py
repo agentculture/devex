@@ -12,18 +12,25 @@ def reload_agent_experience():
     importlib.reload(importlib.import_module("agent_experience"))
 
 
-def test_version_resolves_for_either_dist_name(monkeypatch, reload_agent_experience):
-    """`agent_experience.__version__` must resolve whether the wheel is installed
-    as `agex-cli` (canonical) or `agent-devex` (alias)."""
+@pytest.mark.parametrize(
+    "installed_dist",
+    ["agex-cli", "agent-devex", "devex-cli"],
+)
+def test_version_resolves_for_any_dist_name(
+    monkeypatch, reload_agent_experience, installed_dist
+):
+    """`agent_experience.__version__` must resolve whichever of the three
+    distribution names the wheel was installed as: `agex-cli` (canonical),
+    `agent-devex`, or `devex-cli` (aliases)."""
     from importlib.metadata import PackageNotFoundError
 
     real_version = importlib.import_module("importlib.metadata").version
 
     def fake_version(dist):
-        if dist == "agex-cli":
-            raise PackageNotFoundError(dist)
-        if dist == "agent-devex":
+        if dist == installed_dist:
             return "9.9.9"
+        if dist in {"agex-cli", "agent-devex", "devex-cli"}:
+            raise PackageNotFoundError(dist)
         return real_version(dist)
 
     monkeypatch.setattr("importlib.metadata.version", fake_version)

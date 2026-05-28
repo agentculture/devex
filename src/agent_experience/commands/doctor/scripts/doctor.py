@@ -24,6 +24,7 @@ from agent_experience.core.paths import (
     config_path,
     data_dir,
 )
+from agent_experience.core.prog import error_prefix
 from agent_experience.core.render import render_string
 from agent_experience.core.skill_loader import load_skill
 
@@ -74,8 +75,8 @@ def _check_version() -> CheckResult:
             _NAME_AGEX_VERSION,
             "fail",
             "Could not resolve `agent_experience.__version__`. Reinstall with "
-            "`uv pip install -e .[dev]`, `pipx install agex-cli`, or "
-            "`pipx install agent-devex`.",
+            "`uv pip install -e .[dev]`, `pipx install agex-cli`, "
+            "`pipx install agent-devex`, or `pipx install devex-cli`.",
         )
     return CheckResult(_NAME_AGEX_VERSION, "ok", __version__)
 
@@ -341,24 +342,24 @@ def run(role: str | None = None) -> tuple[str, int, str]:
     Read-only.  Never initializes ``.agex/``.
     """
     if role is not None and _ROLE_RE.match(role) is None:
-        return ("", 2, f"agex: error: invalid role slug '{role}'")
+        return ("", 2, error_prefix(f"invalid role slug '{role}'"))
 
     role_section: str | None = None
     if role is not None:
         trav = _resolve_role(role)
         if trav is None:
-            return ("", 2, f"agex: error: unknown role '{role}'")
+            return ("", 2, error_prefix(f"unknown role '{role}'"))
         try:
             role_text = trav.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
-            return ("", 1, f"agex: error: could not read role asset for '{role}': {exc}")
+            return ("", 1, error_prefix(f"could not read role asset for '{role}': {exc}"))
         # Role assets are Jinja templates per the addendum spec; v0.1 passes
         # an empty context but rendering still resolves any `{% raw %}` /
         # `{{ }}` markup the role file may use, rather than dumping it raw.
         try:
             role_section = render_string(role_text, {})
         except Exception as exc:
-            return ("", 1, f"agex: error: failed to render role '{role}': {exc}")
+            return ("", 1, error_prefix(f"failed to render role '{role}': {exc}"))
 
     categories = _build_categories()
     summary = _summarize(categories)
@@ -369,8 +370,10 @@ def run(role: str | None = None) -> tuple[str, int, str]:
         return (
             "",
             1,
-            f"agex: error: could not read `doctor/assets/report.md.j2`: {exc}. "
-            "Reinstall the package.",
+            error_prefix(
+                f"could not read `doctor/assets/report.md.j2`: {exc}. "
+                "Reinstall the package."
+            ),
         )
     out = render_string(
         template_text,
@@ -386,6 +389,6 @@ def run(role: str | None = None) -> tuple[str, int, str]:
     )
 
     if summary["fail"] > 0:
-        stderr = f"agex: error: {summary['fail']} health check(s) failed"
+        stderr = error_prefix(f"{summary['fail']} health check(s) failed")
         return (out, 1, stderr)
     return (out, 0, "")

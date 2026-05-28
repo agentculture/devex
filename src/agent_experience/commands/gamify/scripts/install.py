@@ -8,6 +8,7 @@ from agent_experience.core.backend import Backend
 from agent_experience.core.config import load as load_config
 from agent_experience.core.config import save as save_config
 from agent_experience.core.paths import ensure_init
+from agent_experience.core.prog import error_prefix, prog_name
 
 
 def _fragments_file() -> Traversable:
@@ -110,7 +111,7 @@ def install(backend: Backend) -> tuple[str, int, str]:
     try:
         hooks = _load_hooks_file(hooks_file)
     except ValueError as e:
-        return ("", 2, f"agex: error: {e}")
+        return ("", 2, error_prefix(str(e)))
 
     written_ids, added_count = _merge_fragments(hooks, fragments)
     if added_count:
@@ -142,7 +143,8 @@ def install(backend: Backend) -> tuple[str, int, str]:
         status_line,
         "- Fragment IDs: " + ", ".join(f"`{i}`" for i in written_ids),
         "",
-        f"Next: run `agex learn gamify --agent {backend.value}` to set up the levelup skill.",
+        f"Next: run `{prog_name()} learn gamify --agent {backend.value}`"
+        " to set up the levelup skill.",
         "",
     ]
     return ("\n".join(lines), 0, "")
@@ -176,7 +178,7 @@ def uninstall(backend: Backend) -> tuple[str, int, str]:
     try:
         hooks = _load_hooks_file(hooks_file)
     except ValueError as e:
-        return ("", 2, f"agex: error: {e}")
+        return ("", 2, error_prefix(str(e)))
 
     removed_count = _remove_ids_from_hooks(hooks, ids_to_remove)
     if removed_count:
@@ -196,6 +198,6 @@ def _unsupported_notice(backend: Backend) -> str:
     return (
         f"## `gamify` is not supported on {backend.value}\n\n"
         f"Hooks are required to track usage events, and {backend.value} does not expose "
-        f"a hook interface agex can write to.\n\n"
-        "Want this supported? Open an issue: <https://github.com/agentculture/agex-cli/issues>\n"
+        f"a hook interface {prog_name()} can write to.\n\n"
+        "Want this supported? Open an issue: <https://github.com/agentculture/devex/issues>\n"
     )

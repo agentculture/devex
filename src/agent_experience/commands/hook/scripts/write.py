@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from agent_experience.core.hook_io import append_event
 from agent_experience.core.paths import ensure_init
+from agent_experience.core.prog import error_prefix
 
 
 def run(event: str, args: list[str]) -> tuple[str, int, str]:
@@ -20,5 +21,5 @@ def run(event: str, args: list[str]) -> tuple[str, int, str]:
     except ValueError as e:
         # append_event → _stream_path rejects names that don't match the
         # `^[a-z][a-z0-9-]*$` slug whitelist (path-traversal guard).
-        return ("", 2, f"agex: error: {e}")
+        return ("", 2, error_prefix(str(e)))
     return ("", 0, "")

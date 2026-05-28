@@ -71,3 +71,14 @@ def test_backend_command_bad_agent_reports_error(argv, tmp_path, monkeypatch, ca
     assert code == 2
     assert captured.err.startswith("agex: error: ")
     assert "gemini" in captured.err
+
+
+def test_error_prefix_follows_invoked_command_name(tmp_path, monkeypatch, capsys):
+    """Invoked as `devex`, the error prefix is `devex: error: ` — the prefix is
+    built from core.prog.prog_name(), not a hardcoded `agex`."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("sys.argv", ["/usr/local/bin/devex"])
+    code = cli.main(["learn", "--agent", "gemini"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert captured.err.startswith("devex: error: ")

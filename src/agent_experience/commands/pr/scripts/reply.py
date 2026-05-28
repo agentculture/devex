@@ -13,6 +13,7 @@ from agent_experience.commands.pr.scripts import _journal
 from agent_experience.commands.pr.scripts._footer import render_footer
 from agent_experience.core import github
 from agent_experience.core.backend import resolve_backend
+from agent_experience.core.prog import prog_name
 from agent_experience.core.render import render_string
 
 _TEMPLATES_PKG = "agent_experience.commands.pr.assets.templates"
@@ -99,15 +100,16 @@ def _process_line(
 
 def _stderr_for_failures(failures: list[_Failure], parse_error_line: int | None, pr: int) -> str:
     """Build the instructive stderr line for the failure case."""
+    prog = prog_name()
     if parse_error_line is not None:
         return (
-            f"agex: fix line {parse_error_line} (see stdout) and resubmit "
-            f"lines {parse_error_line}..end to 'agex pr reply {pr}'\n"
+            f"{prog}: fix line {parse_error_line} (see stdout) and resubmit "
+            f"lines {parse_error_line}..end to '{prog} pr reply {pr}'\n"
         )
     first_failed = failures[0].line
     return (
-        f"agex: resubmit lines {first_failed}..end from the table above "
-        f"to 'agex pr reply {pr}'\n"
+        f"{prog}: resubmit lines {first_failed}..end from the table above "
+        f"to '{prog} pr reply {pr}'\n"
     )
 
 
