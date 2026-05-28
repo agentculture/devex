@@ -6,7 +6,7 @@ import yaml
 
 from agent_experience.core.backend import Backend
 
-ISSUE_URL = "https://github.com/agentculture/agex-cli/issues"
+ISSUE_URL = "https://github.com/agentculture/devex/issues"
 
 
 @dataclass

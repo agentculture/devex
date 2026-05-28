@@ -3,6 +3,8 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 
+from agent_experience.core.prog import prog_name
+
 # We render markdown for agent / CLI consumption — never HTML in a browser.
 # select_autoescape([], default_for_string=False) makes the intent explicit:
 # escape nothing, for any extension AND for from_string templates (without
@@ -27,7 +29,13 @@ _ENV = Environment(
 # inline tag is the load-bearing one; both stay so a manual CLI scan also
 # sees the suppression.
 def render_string(template: str, context: dict[str, Any]) -> str:
-    return _ENV.from_string(template).render(**context)  # NOSONAR
+    # `prog` is the one intentional global template variable: the command the
+    # CLI was invoked as (`agex` or `devex`). Injecting it here keeps every
+    # rendered template/footer able to say `{{ prog }} pr ...` without each
+    # command threading it through its own context dict. An explicit context
+    # value of the same name still wins (the `**context` spread comes last).
+    ctx = {"prog": prog_name(), **context}
+    return _ENV.from_string(template).render(**ctx)  # NOSONAR
 
 
 def render_file(path: Path, context: dict[str, Any]) -> str:

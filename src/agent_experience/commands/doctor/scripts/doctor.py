@@ -74,8 +74,8 @@ def _check_version() -> CheckResult:
             _NAME_AGEX_VERSION,
             "fail",
             "Could not resolve `agent_experience.__version__`. Reinstall with "
-            "`uv pip install -e .[dev]`, `pipx install agex-cli`, or "
-            "`pipx install agent-devex`.",
+            "`uv pip install -e .[dev]`, `pipx install agex-cli`, "
+            "`pipx install agent-devex`, or `pipx install devex-cli`.",
         )
     return CheckResult(_NAME_AGEX_VERSION, "ok", __version__)
 

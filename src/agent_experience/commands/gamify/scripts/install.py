@@ -197,5 +197,5 @@ def _unsupported_notice(backend: Backend) -> str:
         f"## `gamify` is not supported on {backend.value}\n\n"
         f"Hooks are required to track usage events, and {backend.value} does not expose "
         f"a hook interface agex can write to.\n\n"
-        "Want this supported? Open an issue: <https://github.com/agentculture/agex-cli/issues>\n"
+        "Want this supported? Open an issue: <https://github.com/agentculture/devex/issues>\n"
     )

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-05-28
+
+### Added
+
+- `devex` console command — second entry point alongside `agex`; both invoke the same CLI and emitted output (Next-step footers, briefing/template headers, error prefixes) reflects whichever name was typed, via the new single-source-of-truth `core.prog.prog_name()` injected into the render context.
+- Third PyPI distribution name `devex-cli` — the same wheel now publishes under `agex-cli` (canonical), `agent-devex`, and `devex-cli`; version resolution and the publish matrices cover all three.
+
+### Changed
+
+- Repo renamed `agentculture/agex-cli` → `agentculture/devex`; updated in-code issue/repo URLs, README, CLAUDE.md, and the publish workflow OIDC setup notes.
+- SonarCloud project key → `agentculture_devex` (display name `devex`; organization unchanged).
+
 ## [0.22.0] - 2026-05-25
 
 ### Added

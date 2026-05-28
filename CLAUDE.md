@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`agex` — non-agentic Python CLI that emits deterministic per-backend markdown briefings for autonomous agents. PyPI distribution name: `agex-cli`. CLI entry point: `agex`. GitHub repo: `agentculture/agex-cli`. Python module (unchanged): `agent_experience`.
+`agex` — non-agentic Python CLI that emits deterministic per-backend markdown briefings for autonomous agents. Published on PyPI under three distribution names: `agex-cli` (canonical), `agent-devex`, and `devex-cli` — the same wheel each time. CLI entry points: `agex` and `devex` (both invoke the same tool; emitted output reflects whichever name was typed). GitHub repo: `agentculture/devex`. Python module (unchanged): `agent_experience`.
 
 **Source-of-truth documents:**
 
