@@ -25,15 +25,6 @@ from agent_experience.core.render import render_string
 _TEMPLATES_PKG = "agent_experience.commands.pr.assets.templates"
 
 
-def _resolve_pr(pr: int | None) -> int:
-    if pr is not None:
-        return pr
-    view = github.pr_view(None)
-    if view is None:
-        raise ValueError("no PR found for current branch; pass <PR> explicitly")
-    return int(view["number"])
-
-
 def _has_recent_local_commits(journal_events: list[dict[str, Any]], pr: int) -> bool:
     """True if `git log` shows commits authored after the most recent
     `pr_read` event for this PR.  No event yet → False (first read)."""
@@ -60,7 +51,7 @@ def run(
     wait: int | None,
 ) -> tuple[str, int, str]:
     backend = resolve_backend(agent, project_dir)
-    pr_number = _resolve_pr(pr)
+    pr_number = github.resolve_pr_number(pr)
 
     waited_secs = 0
     waiting_for: list[str] = []

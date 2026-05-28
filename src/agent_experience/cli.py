@@ -27,6 +27,7 @@ from agent_experience.commands.pr.scripts import lint as pr_lint_script
 from agent_experience.commands.pr.scripts import open_ as pr_open_script
 from agent_experience.commands.pr.scripts import read as pr_read_script
 from agent_experience.commands.pr.scripts import reply as pr_reply_script
+from agent_experience.commands.pr.scripts import review as pr_review_script
 from agent_experience.core.backend import parse_backend
 from agent_experience.core.prog import prog_name
 
@@ -237,6 +238,22 @@ def _cmd_pr_await(args: argparse.Namespace) -> int:
     return exit_code
 
 
+def _cmd_pr_review(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = pr_review_script.run(
+            agent=args.agent, project_dir=Path.cwd(), pr=args.pr
+        )
+    except ValueError as exc:
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        print(_gh_rerun_hint(), file=sys.stderr)
+        return 1
+    _emit(stdout, stderr)
+    return exit_code
+
+
 def _cmd_pr_delta(args: argparse.Namespace) -> int:
     try:
         stdout, exit_code, stderr = pr_delta_script.run(agent=args.agent, project_dir=Path.cwd())
@@ -402,6 +419,14 @@ def _register_pr(sub: argparse._SubParsersAction) -> None:
     )
     _add_agent_option(p_await, required=False, help_text=_AGENT_HELP)
     p_await.set_defaults(func=_cmd_pr_await)
+
+    p_review = pr_sub.add_parser(
+        "review",
+        help="Post the Qodo agentic-review trigger (/agentic_review) on a PR.",
+    )
+    p_review.add_argument("pr", type=int, nargs="?", default=None)
+    _add_agent_option(p_review, required=False, help_text=_AGENT_HELP)
+    p_review.set_defaults(func=_cmd_pr_review)
 
     p_delta = pr_sub.add_parser("delta", help="Show the delta since the last PR read.")
     _add_agent_option(p_delta, required=False, help_text=_AGENT_HELP)

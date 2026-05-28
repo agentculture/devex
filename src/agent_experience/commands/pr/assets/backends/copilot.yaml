@@ -12,6 +12,7 @@ hints:
   reply_with_failures: "Resubmit the failed lines (see table above) to `{{ prog }} pr reply {{ pr }}`."
   reply_clean: "Push fixes (if any), then `{{ prog }} pr read {{ pr }} --wait 180`."
   delta_done: "Triage each sibling — open follow-up PRs where alignment drifted; mention them in your reply."
+  review_posted: "Posted `/agentic_review` — `{{ prog }} pr read {{ pr }} --wait 180` once Qodo responds."
   await_clean: "PR #{{ pr }} is ready — wait for human merge."
   await_gate_error: "SonarCloud quality gate is ERROR — fix the new issues above, push, then `{{ prog }} pr await {{ pr }}` again."
   await_gate_unknown: "SonarCloud quality gate is UNKNOWN — analysis is pending or the project isn't analyzed yet; wait and re-run `{{ prog }} pr await {{ pr }}`."

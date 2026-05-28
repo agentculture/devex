@@ -1,12 +1,12 @@
 ---
 name: pr
-description: GitHub PR lifecycle commands for agents — lint, open, read, reply, await, delta. Each command ends with a deterministic "Next step:" footer so the agent never has to guess what to chain.
+description: GitHub PR lifecycle commands for agents — lint, open, read, reply, review, await, delta. Each command ends with a deterministic "Next step:" footer so the agent never has to guess what to chain.
 type: command
 ---
 
 # `agex pr` — PR lifecycle for agents
 
-Six verbs, in roughly the order an agent uses them on a PR:
+Seven verbs, in roughly the order an agent uses them on a PR:
 
 | Verb | Purpose |
 |---|---|
@@ -14,6 +14,7 @@ Six verbs, in roughly the order an agent uses them on a PR:
 | `agex pr open --title T [--body-file F] [--draft] [--delayed-read]` | `gh pr create` with auto-signed body; with `--delayed-read` chains to `read --wait 180`. |
 | `agex pr read [<PR>] [--wait SECS]` | Unified briefing: CI checks, SonarCloud quality gate, all comments, reviewer readiness. With `--wait`, polls until required reviewers are ready or timeout. Always exits 0. |
 | `agex pr reply <PR>` | Read JSONL replies on stdin, post each, resolve threads. |
+| `agex pr review [<PR>]` | Post the Qodo agentic-review trigger (`/agentic_review`) on a PR. Re-triggers on an already-open PR; `pr open` posts it automatically for a new non-draft PR. |
 | `agex pr await [<PR>] [--max-wait SECS]` | "Wake me when this is triage-able" — polls readiness, runs CI + Sonar gate, dumps briefing. **Exits 1 on quality-gate `ERROR`, unresolved threads, or failing CI checks**, 0 on clean state or timeout. Default `--max-wait 1800` (30 min). |
 | `agex pr delta` | Dump sibling-project `CLAUDE.md` heads + `culture.yaml` for alignment review. |
 
@@ -40,6 +41,24 @@ PR health (e.g., in scripts that should fail if Sonar errors).
   gates on top of the same readiness loop and **exits non-zero** when the PR
   isn't clean.
 
+## Qodo agentic review
+
+When a PR is opened, Qodo runs an agentic code review on demand when it sees a
+trigger comment. The current command is **`/agentic_review`**. The legacy
+`/improve` command is **deprecated** (Qodo replies with a deprecation banner and
+no committed removal date), so agex never posts `/improve`.
+
+- `agex pr open` posts `/agentic_review` **automatically** for a freshly created,
+  non-draft PR — out of the box, no flag. Drafts are skipped (not review-ready)
+  and already-open PRs are skipped (idempotent re-opens shouldn't spam the
+  thread).
+- `agex pr review [<PR>]` posts the same trigger on demand — use it to re-trigger
+  a review on an existing PR (e.g. after pushing fixes) or to trigger a draft
+  once it's ready.
+
+The command string lives in one place (`scripts/review.QODO_REVIEW_TRIGGER`), so
+a future Qodo rename is a one-line change for every consumer of `agex pr`.
+
 ## SonarCloud project key
 
 `pr read` and `pr await` query the SonarCloud quality gate for the current
@@ -57,7 +76,9 @@ Every command ends with a `**Next step:**` footer — chase the chain without gu
 ## Side effects
 
 Network: every command except `lint` and `delta` talks to GitHub via `gh`.
-Disk: `pr open`, `pr read`, and `pr reply` append events to
+`pr open` (non-draft, new PR) and `pr review` post the `/agentic_review` trigger
+comment.
+Disk: `pr open`, `pr read`, `pr reply`, and `pr review` append events to
 `.agex/data/pr/events.jsonl`.
 
 ## Prerequisites

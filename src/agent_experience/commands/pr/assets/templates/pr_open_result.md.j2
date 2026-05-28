@@ -9,5 +9,9 @@ PR opened: **#{{ pr }}**{% if url %} ({{ url }}){% endif %}.
 - Title: `{{ title }}`
 - Signed: {{ "yes" if signed else "no" }}
 - Draft: {{ "yes" if draft else "no" }}
-
+{% if review_posted %}- Posted `{{ review_command }}` to start a Qodo agentic review.
+{% endif %}
+{%- if review_failed %}
+> ⚠️ PR created, but posting `{{ review_command }}` failed (network/`gh`). The PR is open — run `{{ prog }} pr review {{ pr }}` to post the Qodo trigger once reachable.
+{% endif %}
 {{ footer }}

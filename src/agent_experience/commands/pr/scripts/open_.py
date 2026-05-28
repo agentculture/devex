@@ -7,7 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from agent_experience.commands.pr.assets.rules.next_step_rules import open_next_step
-from agent_experience.commands.pr.scripts import _journal
+from agent_experience.commands.pr.scripts import _journal, review
 from agent_experience.commands.pr.scripts._footer import render_footer
 from agent_experience.core import github
 from agent_experience.core.backend import resolve_backend
@@ -55,6 +55,25 @@ def run(
         was_already_open = False
         _journal.append({"type": "pr_opened", "pr": pr, "title": title})
 
+    # Auto-post the Qodo agentic-review trigger out of the box for a freshly
+    # created, non-draft PR.  Skipped for drafts (not review-ready yet — use
+    # `pr review` to trigger later) and for already-open PRs (idempotent
+    # re-opens shouldn't spam the thread).
+    #
+    # The trigger post is best-effort: PR creation is the primary side effect
+    # and has already succeeded, so a transient `gh` failure here must NOT abort
+    # the command (which would tell the user to rerun `pr open`, only to skip
+    # the trigger forever as an already-open PR).  On failure we keep exit 0 and
+    # point the user at `pr review` to retry just the trigger.
+    review_posted = False
+    review_failed = False
+    if not was_already_open and not draft:
+        try:
+            review.post_trigger(pr)
+            review_posted = True
+        except RuntimeError:
+            review_failed = True
+
     footer_key, footer_ctx = open_next_step(pr, was_already_open)
     footer = render_footer(footer_key, backend, footer_ctx)
 
@@ -68,6 +87,9 @@ def run(
             "signed": signed,
             "draft": draft,
             "was_already_open": was_already_open,
+            "review_posted": review_posted,
+            "review_failed": review_failed,
+            "review_command": review.QODO_REVIEW_TRIGGER,
             "footer": footer,
         },
     )

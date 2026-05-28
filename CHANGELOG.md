@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-05-28
+
+### Added
+
+- `agex pr review [<PR>]` verb — posts the Qodo agentic-review trigger (`/agentic_review`) on demand; re-triggers a review on an existing PR or triggers a draft once ready.
+- `agex pr open` now auto-posts `/agentic_review` out of the box for a freshly created, non-draft PR (skipped for drafts and already-open PRs) so the review trigger is never hand-typed (#60).
+
+### Changed
+
+- Centralized the Qodo review-trigger command string in one place (`commands/pr/scripts/review.QODO_REVIEW_TRIGGER`). agex emits the current `/agentic_review`; the legacy `/improve` command is deprecated by Qodo and is never emitted by agex (#60).
+
 ## [0.23.0] - 2026-05-28
 
 ### Added
