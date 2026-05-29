@@ -2,10 +2,14 @@ import re
 from importlib.resources import as_file, files
 from importlib.resources.abc import Traversable
 
+from devex.commands.learn.scripts.next_step import learn_next_step
 from devex.core.backend import Backend
+from devex.core.footer import render_footer
 from devex.core.prog import error_prefix
 from devex.core.render import render_string
 from devex.core.skill_loader import Skill, load_skill
+
+_BACKENDS_PKG = "devex.commands.learn.assets.backends"
 
 _TOPIC_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 _SKILL_FILENAME = "SKILL.md"
@@ -46,8 +50,13 @@ def _list_topics() -> list[dict]:
 def run_menu(backend: Backend) -> tuple[str, int, str]:
     """Return (stdout, exit_code, stderr) for the topic menu."""
     topics = _list_topics()
+    rule_key, footer_ctx = learn_next_step(is_menu=True)
+    footer_ctx["backend"] = backend.value
+    footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
     template_text = _learn_assets().joinpath("menu.md.j2").read_text(encoding="utf-8")
-    out = render_string(template_text, {"backend": backend.value, "topics": topics})
+    out = render_string(
+        template_text, {"backend": backend.value, "topics": topics, "footer": footer}
+    )
     return (out, 0, "")
 
 
@@ -66,8 +75,15 @@ def run_topic(topic: str, backend: Backend) -> tuple[str, int, str]:
     skill = _load_skill_from_traversable(skill_md)
     template_path = topic_dir.joinpath("assets", "skill-template", backend.value, _SKILL_FILENAME)
     template_body = template_path.read_text(encoding="utf-8") if template_path.is_file() else ""
+    rule_key, footer_ctx = learn_next_step(is_menu=False)
+    footer_ctx["backend"] = backend.value
+    footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
     rendered = render_string(
         skill.body,
-        {"backend": backend.value, "skill_template_body": template_body},
+        {
+            "backend": backend.value,
+            "skill_template_body": template_body,
+            "footer": footer,
+        },
     )
     return (rendered, 0, "")

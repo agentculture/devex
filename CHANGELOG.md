@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.27.0] - 2026-05-29
+## [0.28.0] - 2026-05-29
 
 ### Added
 
@@ -17,6 +17,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - design-invariant #4 now names `git push` (push-only) as an allowed side effect of `devex push`, alongside the existing pr-namespace gh/sleep carve-outs.
 - `core/github.py` gains `git_push()` and `current_branch_pr()` helpers.
+
+## [0.27.0] - 2026-05-29
+
+### Added
+
+- Cross-command `Next step:` footers: every non-silent command (`explain`, `learn`, `overview`, `doctor`, `gamify`, `hook read`, plus the `pr` namespace) now ends with a deterministic, per-backend agent-facing micro-prompt telling the running agent how to continue.
+- Optional `--agent` on `explain` and `doctor`: backend-specific footer when supplied, neutral footer when omitted (non-breaking; flagless calls keep working).
+- `core/footer.py` — shared, command-agnostic footer renderer (`render_footer` + `render_neutral_footer`) plus a neutral hints source `core/assets/backends/neutral.yaml`.
+- Per-command next-step decision functions and `hints:` blocks under `commands/<cmd>/assets/backends/<backend>.yaml`.
+- Footer-guarantee + hint-coverage guard tests (every command ends with one footer; every reachable rule_key has a hint; deterministic, no new side effects).
+
+### Changed
+
+- Footer-rendering machinery promoted from `commands/pr/` into `core/` (pure relocation; pr footers byte-identical).
+- `gamify` now emits the structured footer for install/uninstall, replacing the prior ad-hoc `Next:` line.
+
+### Fixed
+
+- `gamify` unsupported-backend notice (codex/copilot/acp) now ends with a `Next step:` footer, closing a gap in the cross-command guarantee.
+
+## [0.26.1] - 2026-05-29
+
+### Added
+
+- SonarCloud CI-based analysis + coverage upload: a `sonarcloud` job in test.yml runs `pytest --cov` and the SHA-pinned `sonarqube-scan-action` (v6), reading `sonar-project.properties` + the `SONAR_TOKEN` secret. Coverage config lives in `pyproject.toml [tool.coverage.run]` (`relative_files` so coverage.xml paths map to `sonar.sources=src`).
+
+### Changed
+
+- SonarCloud moved from Automatic Analysis to CI-based analysis (the two are mutually exclusive); project now under the `agentculture` org. Updated CLAUDE.md / sonar-project.properties notes accordingly.
 
 ## [0.26.0] - 2026-05-29
 

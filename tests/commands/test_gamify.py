@@ -171,3 +171,77 @@ def test_gamify_codex_emits_unsupported_notice(tmp_path, monkeypatch, capsys):
     assert "not supported on codex" in captured.out.lower()
     assert "github.com" in captured.out
     assert not (tmp_path / ".claude").exists()
+
+
+# --- Structured footer tests ---
+
+
+def test_gamify_install_footer_present(tmp_path, monkeypatch, capsys):
+    """Install output must end with the structured '**Next step:**' footer."""
+    monkeypatch.chdir(tmp_path)
+    code = cli.main(["gamify", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    # Footer separator and keyword are always present.
+    assert "---" in captured.out
+    assert "**Next step:**" in captured.out
+    # The install hint names the learn command.
+    assert "learn gamify" in captured.out
+    assert "--agent claude-code" in captured.out
+    # The old ad-hoc line must be gone.
+    assert "Next: run" not in captured.out
+
+
+def test_gamify_install_already_present_footer(tmp_path, monkeypatch, capsys):
+    """Re-running install (idempotent path) must also emit the structured footer."""
+    monkeypatch.chdir(tmp_path)
+    cli.main(["gamify", "--agent", "claude-code"])
+    capsys.readouterr()
+    code = cli.main(["gamify", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "**Next step:**" in captured.out
+    assert "learn gamify" in captured.out
+    # No old ad-hoc line.
+    assert "Next: run" not in captured.out
+
+
+def test_gamify_uninstall_footer_present(tmp_path, monkeypatch, capsys):
+    """Uninstall output must end with the structured '**Next step:**' footer."""
+    monkeypatch.chdir(tmp_path)
+    cli.main(["gamify", "--agent", "claude-code"])
+    capsys.readouterr()
+    code = cli.main(["gamify", "--uninstall", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "---" in captured.out
+    assert "**Next step:**" in captured.out
+    # The uninstall hint names the reinstall command.
+    assert "gamify" in captured.out
+    assert "--agent claude-code" in captured.out
+
+
+def test_gamify_nothing_to_remove_footer_present(tmp_path, monkeypatch, capsys):
+    """Uninstall with nothing recorded must emit the 'nothing to remove' footer."""
+    monkeypatch.chdir(tmp_path)
+    # Never installed — uninstall immediately.
+    code = cli.main(["gamify", "--uninstall", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "**Next step:**" in captured.out
+    # Hint tells the agent to install first.
+    assert "gamify" in captured.out
+    assert "--agent claude-code" in captured.out
+
+
+def test_gamify_uninstall_missing_hooks_file_footer(tmp_path, monkeypatch, capsys):
+    """Uninstall when hooks file is already gone must emit the uninstall footer."""
+    monkeypatch.chdir(tmp_path)
+    cli.main(["gamify", "--agent", "claude-code"])
+    capsys.readouterr()
+    (tmp_path / ".claude" / "hooks.json").unlink()
+    code = cli.main(["gamify", "--uninstall", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "**Next step:**" in captured.out
+    assert "gamify" in captured.out

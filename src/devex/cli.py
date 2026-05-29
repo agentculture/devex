@@ -87,14 +87,34 @@ def _parse_backend_or_report(agent: Optional[str]):
 # ---------------------------------------------------------------------------
 
 
+def _parse_optional_backend_or_report(agent: Optional[str]):
+    """Parse an *optional* ``--agent`` into a Backend.
+
+    Returns ``(backend, None)`` — with ``backend`` left as ``None`` when no
+    ``--agent`` was given (the neutral path) — or ``(None, 2)`` after printing
+    the canonical error when an explicit value is invalid.  Used by commands
+    where ``--agent`` is optional (``explain``, ``doctor``): omitting it is
+    valid and selects the neutral footer rather than erroring.
+    """
+    if agent is None:
+        return None, None
+    return _parse_backend_or_report(agent)
+
+
 def _cmd_explain(args: argparse.Namespace) -> int:
-    stdout, exit_code, stderr = explain_script.run(args.topic)
+    backend, err = _parse_optional_backend_or_report(args.agent)
+    if err is not None:
+        return err
+    stdout, exit_code, stderr = explain_script.run(args.topic, backend)
     _emit(stdout, stderr)
     return exit_code
 
 
 def _cmd_doctor(args: argparse.Namespace) -> int:
-    stdout, exit_code, stderr = doctor_script.run(args.role)
+    backend, err = _parse_optional_backend_or_report(args.agent)
+    if err is not None:
+        return err
+    stdout, exit_code, stderr = doctor_script.run(args.role, backend)
     _emit(stdout, stderr)
     return exit_code
 
@@ -339,12 +359,22 @@ def _build_parser() -> argparse.ArgumentParser:
     # explain
     p_explain = sub.add_parser("explain", help="Describe a command or concept.")
     p_explain.add_argument("topic", help="Topic to explain.")
+    _add_agent_option(
+        p_explain,
+        required=False,
+        help_text=f"{_AGENT_HELP} Optional — tunes the 'Next step' footer.",
+    )
     p_explain.set_defaults(func=_cmd_explain)
 
     # doctor
     p_doctor = sub.add_parser("doctor", help="Diagnose the project's devex setup.")
     p_doctor.add_argument(
         "--role", default=None, help="Render a role-specific check section (e.g., pr-review)."
+    )
+    _add_agent_option(
+        p_doctor,
+        required=False,
+        help_text=f"{_AGENT_HELP} Optional — tunes the 'Next step' footer.",
     )
     p_doctor.set_defaults(func=_cmd_doctor)
 

@@ -1,6 +1,8 @@
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 
+from devex.commands.hook.scripts._footer import render_footer
+from devex.commands.hook.scripts.next_step import hook_read_next_step
 from devex.core import journal as _journal
 from devex.core.backend import Backend
 from devex.core.hook_io import load_events
@@ -45,9 +47,15 @@ def run(backend: Backend) -> tuple[str, int, str]:
                 events = _journal.load_events(stream_name)
                 streams.append({"name": stream_name, "events": _summarize(events)})
 
+    has_events = any(s["events"] for s in streams)
+    rule_key, footer_ctx = hook_read_next_step(has_events=has_events)
+    # Inject backend so hints can reference {{ backend }} for command examples.
+    footer_ctx = {"backend": backend.value, **footer_ctx}
+    footer = render_footer(rule_key, backend, footer_ctx)
+
     template_text = _assets_root().joinpath("table.md.j2").read_text(encoding="utf-8")
     out = render_string(
         template_text,
-        {"backend": backend.value, "source": str(root), "streams": streams},
+        {"backend": backend.value, "source": str(root), "streams": streams, "footer": footer},
     )
     return (out, 0, "")
