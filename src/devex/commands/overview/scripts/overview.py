@@ -6,6 +6,8 @@ from devex.backends.acp.probe import probe as acp_probe
 from devex.backends.claude_code.probe import probe as claude_code_probe
 from devex.backends.codex.probe import probe as codex_probe
 from devex.backends.copilot.probe import probe as copilot_probe
+from devex.commands.overview.scripts._footer import render_footer
+from devex.commands.overview.scripts.next_step import overview_next_step
 from devex.core.backend import Backend
 from devex.core.paths import ensure_init
 from devex.core.render import render_string
@@ -32,9 +34,17 @@ def run(backend: Backend) -> tuple[str, int, str]:
 
     probe_result = _PROBES[backend](project_dir)
 
+    footer_key, footer_ctx = overview_next_step()
+    footer = render_footer(footer_key, backend, footer_ctx)
+
     template_text = _assets_root().joinpath("sections.md.j2").read_text(encoding="utf-8")
     out = render_string(
         template_text,
-        {"backend": backend.value, "project_dir": project_dir, "probe": probe_result},
+        {
+            "backend": backend.value,
+            "project_dir": project_dir,
+            "probe": probe_result,
+            "footer": footer,
+        },
     )
     return (out, 0, "")
