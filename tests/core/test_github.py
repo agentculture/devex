@@ -390,3 +390,87 @@ def test_sonar_hotspots_empty_on_non_json(monkeypatch):
         lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
     )
     assert github.sonar_hotspots("owner_repo", pr=42) == []
+
+
+# ---------------------------------------------------------------------------
+# git_push
+# ---------------------------------------------------------------------------
+
+
+def test_git_push_runs_exact_argv(monkeypatch):
+    """git_push() must run exactly ['git', 'push'] — nothing else."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, encoding, check):
+        captured["cmd"] = cmd
+        return _FakeCompleted(stdout="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    github.git_push()
+    assert captured["cmd"] == ["git", "push"]
+
+
+def test_git_push_raises_on_failure(monkeypatch):
+    """A non-zero git push exit code must surface as RuntimeError."""
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(
+            stderr="error: failed to push some refs\nextra line",
+            returncode=1,
+        ),
+    )
+    with pytest.raises(RuntimeError, match="git push failed: error: failed to push some refs"):
+        github.git_push()
+
+
+def test_git_push_no_commit_rebase_merge_in_argv(monkeypatch):
+    """git_push() must not smuggle commit/rebase/merge/stash/branch into the argv."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, encoding, check):
+        captured["cmd"] = cmd
+        return _FakeCompleted(stdout="", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    github.git_push()
+    forbidden = {"commit", "rebase", "merge", "stash", "branch", "reset", "checkout"}
+    assert not forbidden.intersection(captured["cmd"])
+
+
+# ---------------------------------------------------------------------------
+# current_branch_pr
+# ---------------------------------------------------------------------------
+
+
+def test_current_branch_pr_returns_number_when_pr_exists(monkeypatch):
+    """current_branch_pr() returns the int PR number from a single gh pr view call."""
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check, env=None):
+        captured["cmd"] = cmd
+        return _FakeCompleted(
+            stdout=json.dumps({"number": 77, "state": "OPEN", "title": "feat: push"}),
+            returncode=0,
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    result = github.current_branch_pr()
+    assert result == 77
+    # Must be a single gh pr view call — spot-check the argv prefix.
+    assert captured["cmd"][:3] == ["gh", "pr", "view"]
+
+
+def test_current_branch_pr_returns_none_when_no_pr(monkeypatch):
+    """current_branch_pr() returns None — never raises — when there is no PR."""
+
+    def fake_run(cmd, capture_output, text, check, env=None):
+        return _FakeCompleted(
+            stderr='no pull requests found for branch "feat/no-pr"\n',
+            returncode=1,
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    # Must not raise.
+    result = github.current_branch_pr()
+    assert result is None
