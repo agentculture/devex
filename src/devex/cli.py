@@ -22,6 +22,7 @@ from devex.commands.hook.scripts import write as hook_write_script
 from devex.commands.learn.scripts import learn as learn_script
 from devex.commands.overview.scripts import overview as overview_script
 from devex.commands.pr.scripts import await_ as pr_await_script
+from devex.commands.push.scripts import push as push_script
 from devex.commands.pr.scripts import delta as pr_delta_script
 from devex.commands.pr.scripts import lint as pr_lint_script
 from devex.commands.pr.scripts import open_ as pr_open_script
@@ -127,6 +128,23 @@ def _cmd_overview(args: argparse.Namespace) -> int:
     if err is not None:
         return err
     stdout, exit_code, stderr = overview_script.run(backend)
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_push(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = push_script.run(
+            agent=args.agent, max_wait=args.max_wait, project_dir=Path.cwd()
+        )
+    except ValueError as exc:
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        prog = prog_name()
+        print(str(exc), file=sys.stderr)
+        print(f"{prog}: rerun '{prog} push' once the branch is in a pushable state", file=sys.stderr)
+        return 1
     _emit(stdout, stderr)
     return exit_code
 
@@ -338,6 +356,30 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_agent_option(p_overview, required=True, help_text=_AGENT_HELP)
     p_overview.set_defaults(func=_cmd_overview)
 
+    # push
+    p_push = sub.add_parser(
+        "push",
+        help=(
+            "Push the current branch; if it has an open PR, wait for review "
+            "readiness and render the delta."
+        ),
+    )
+    p_push.add_argument(
+        "--max-wait",
+        type=int,
+        default=180,
+        help=(
+            "Upper bound in seconds to poll for required-reviewer readiness; "
+            "returns early (down to waited=0s) once satisfied (default 180)."
+        ),
+    )
+    _add_agent_option(
+        p_push,
+        required=False,
+        help_text="Backend (claude-code|codex|copilot|acp); falls back to culture.yaml.",
+    )
+    p_push.set_defaults(func=_cmd_push)
+
     _register_hook(sub)
     _register_pr(sub)
 
@@ -491,7 +533,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 # Keep in sync with the sub.add_parser registrations above.
 # If a new top-level command is added, extend this set so _main_entrypoint
 # stops routing it to the unknown-command fallback page.
-_KNOWN_COMMANDS = {"explain", "overview", "learn", "gamify", "hook", "doctor", "pr"}
+_KNOWN_COMMANDS = {"explain", "overview", "learn", "gamify", "hook", "doctor", "pr", "push"}
 
 
 def _main_entrypoint() -> None:
