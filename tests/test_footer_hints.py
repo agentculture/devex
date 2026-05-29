@@ -67,9 +67,24 @@ _FULL_CONTEXT: dict = {
 }
 
 
+_KNOWN_BACKENDS = ("acp", "claude-code", "codex", "copilot")
+
+
 def _commands_with_backends() -> list[str]:
-    """Return sorted list of command names that have an assets/backends/ dir."""
-    return sorted(d.name for d in _SRC_COMMANDS.iterdir() if (d / "assets" / "backends").is_dir())
+    """Command names whose assets/backends/ holds real per-backend hint YAMLs.
+
+    Requires at least one known ``<backend>.yaml`` to be present, so stray dirs
+    (e.g. a leftover ``__pycache__``-only command tree from another branch) are
+    ignored rather than crashing discovery.
+    """
+    out: list[str] = []
+    for d in _SRC_COMMANDS.iterdir():
+        if not d.is_dir() or d.name.startswith("__"):
+            continue
+        bdir = d / "assets" / "backends"
+        if bdir.is_dir() and any((bdir / f"{b}.yaml").is_file() for b in _KNOWN_BACKENDS):
+            out.append(d.name)
+    return sorted(out)
 
 
 def _load_hints(cmd: str, backend_value: str) -> dict[str, str]:

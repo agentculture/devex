@@ -25,3 +25,8 @@ def gamify_uninstall_next_step(backend: Backend) -> tuple[str, dict[str, Any]]:
 def gamify_nothing_to_remove_next_step(backend: Backend) -> tuple[str, dict[str, Any]]:
     """Rule key when uninstall finds no recorded fragments to remove."""
     return "gamify_nothing_to_remove", {"backend": backend.value}
+
+
+def gamify_unsupported_next_step(backend: Backend) -> tuple[str, dict[str, Any]]:
+    """Rule key for the unsupported-backend notice (backend has no hook interface)."""
+    return "gamify_unsupported", {"backend": backend.value}

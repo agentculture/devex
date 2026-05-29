@@ -2,3 +2,4 @@ hints:
   gamify_installed: "Run `{{ prog }} learn gamify --agent {{ backend }}` to see the rules now in play."
   gamify_uninstalled: "Re-run `{{ prog }} gamify --agent {{ backend }}` to reinstall the fragments."
   gamify_nothing_to_remove: "Run `{{ prog }} gamify --agent {{ backend }}` to install the fragments first."
+  gamify_unsupported: "gamify needs a hook interface {{ backend }} lacks — run `{{ prog }} overview --agent {{ backend }}` to see what is available, or track support at the linked issue."

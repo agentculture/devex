@@ -198,9 +198,9 @@ def test_footer_present_once__overview(
     _assert_exactly_one_footer(captured.out, label=" ".join(argv))
 
 
-# gamify only supports claude-code; codex / copilot / acp emit an unsupported
-# notice without a footer — that gap is tracked as a known bug in
-# test_gamify_unsupported_backends_missing_footer below.
+# gamify only *functionally* supports claude-code; codex / copilot / acp emit an
+# unsupported notice (exit 0, invariant #5) — which now ALSO ends with exactly one
+# Next step footer (the gap this suite caught, fixed in install._unsupported_notice).
 _GAMIFY_SUPPORTED_BACKENDS = ("claude-code",)
 _GAMIFY_UNSUPPORTED_BACKENDS = ("codex", "copilot", "acp")
 
@@ -237,34 +237,22 @@ def test_footer_present_once__gamify_uninstall(
     _assert_exactly_one_footer(captured.out, label=f"gamify uninstall --agent {backend}")
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG: gamify unsupported-backend notice lacks a footer. "
-        "The _unsupported_notice() helper in install.py returns a plain string "
-        "with no render_footer() call. Fix: inject a neutral footer into "
-        "_unsupported_notice() or call render_neutral_footer() before returning."
-    ),
-    strict=True,
-)
 @pytest.mark.parametrize("backend", _GAMIFY_UNSUPPORTED_BACKENDS)
-def test_gamify_unsupported_backends_missing_footer(
+def test_gamify_unsupported_backends_have_footer(
     backend: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture,
 ) -> None:
-    """Tracks the known gap: gamify unsupported-backend notices have no footer.
+    """gamify on an unsupported backend still ends with exactly one footer.
 
-    This test is expected to FAIL until the bug is fixed.  When fixed, the
-    xfail mark should be removed and these backends should be added back to
-    test_footer_present_once__gamify_install / test_footer_present_once__gamify_uninstall.
+    'Unsupported' is success (exit 0 + a markdown notice, invariant #5); the
+    cross-command guarantee requires that notice to carry a Next step footer too.
     """
     monkeypatch.chdir(tmp_path)
     code = cli.main(["gamify", "--agent", backend])
     captured = capsys.readouterr()
-    assert code == 0
-    # This assertion is expected to fail (xfail) because the unsupported notice
-    # is returned without a footer.
+    assert code == 0, f"Exit {code} for gamify --agent {backend}. stderr: {captured.err}"
     _assert_exactly_one_footer(captured.out, label=f"gamify unsupported --agent {backend}")
 
 

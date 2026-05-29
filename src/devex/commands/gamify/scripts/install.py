@@ -8,6 +8,7 @@ from devex.commands.gamify.scripts.next_step import (
     gamify_install_next_step,
     gamify_nothing_to_remove_next_step,
     gamify_uninstall_next_step,
+    gamify_unsupported_next_step,
 )
 from devex.core.backend import Backend
 from devex.core.config import load as load_config
@@ -210,9 +211,12 @@ def uninstall(backend: Backend) -> tuple[str, int, str]:
 
 
 def _unsupported_notice(backend: Backend) -> str:
+    rule_key, footer_ctx = gamify_unsupported_next_step(backend)
+    footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
     return (
         f"## `gamify` is not supported on {backend.value}\n\n"
         f"Hooks are required to track usage events, and {backend.value} does not expose "
         f"a hook interface {prog_name()} can write to.\n\n"
-        "Want this supported? Open an issue: <https://github.com/agentculture/devex/issues>\n"
+        "Want this supported? Open an issue: <https://github.com/agentculture/devex/issues>\n\n"
+        f"{footer}\n"
     )
