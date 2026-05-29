@@ -42,9 +42,9 @@ def _all_skill_md_relpaths() -> list[str]:
 def test_meta_test_discovers_all_known_skills() -> None:
     """Verify that at least 10 SKILL.md files are found (6 commands + 4 lessons)."""
     relpaths = _all_skill_md_relpaths()
-    assert len(relpaths) >= 10, (
-        f"Expected >= 10 SKILL.md files under devex.commands, " f"found {len(relpaths)}: {relpaths}"
-    )
+    assert (
+        len(relpaths) >= 10
+    ), f"Expected >= 10 SKILL.md files under devex.commands, found {len(relpaths)}: {relpaths}"
 
 
 # ---------------------------------------------------------------------------

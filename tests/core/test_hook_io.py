@@ -100,14 +100,15 @@ def test_append_event_retries_on_already_locked(tmp_path, monkeypatch):
             raise AlreadyLocked("simulated Windows msvcrt EDEADLK")
         return original_lock(fh, flags)
 
-    # Import the module so we patch the SAME reference append_event uses.
+    # Patch the SAME reference append_event uses: the lock-retry now lives in
+    # the shared `core/_jsonl` helper that hook_io delegates to.
     # `random.uniform` is intentionally NOT patched — the test only asserts
     # call count and final state, so the jitter value does not matter.
-    from devex.core import hook_io
+    from devex.core import _jsonl
 
-    monkeypatch.setattr(hook_io.portalocker, "lock", flaky_lock)
+    monkeypatch.setattr(_jsonl.portalocker, "lock", flaky_lock)
     # Patch out sleep so the test finishes instantly
-    monkeypatch.setattr(hook_io.time, "sleep", lambda _: None)
+    monkeypatch.setattr(_jsonl.time, "sleep", lambda _: None)
 
     append_event("stop", {"i": 42})
 
@@ -125,14 +126,14 @@ def test_append_event_gives_up_after_max_attempts(tmp_path, monkeypatch):
 
     # `random.uniform` is intentionally NOT patched — see the companion test
     # for the rationale (only call count and final outcome are asserted).
-    from devex.core import hook_io
+    from devex.core import _jsonl
 
     def always_fail(fh, flags):
         raise AlreadyLocked("simulated persistent lock contention")
 
-    monkeypatch.setattr(hook_io.portalocker, "lock", always_fail)
+    monkeypatch.setattr(_jsonl.portalocker, "lock", always_fail)
     # Patch out sleep so the test finishes instantly
-    monkeypatch.setattr(hook_io.time, "sleep", lambda _: None)
+    monkeypatch.setattr(_jsonl.time, "sleep", lambda _: None)
 
     with pytest.raises(AlreadyLocked):
         append_event("stop", {"i": 42})

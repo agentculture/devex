@@ -54,7 +54,7 @@ line_length = 100
 
 [tool.bandit]
 # B311 flags any `random.*` usage as potentially unsafe for crypto purposes.
-# `core/hook_io._acquire_lock_with_retry` uses `random.uniform` purely for
+# `core/_jsonl.acquire_lock_with_retry` uses `random.uniform` purely for
 # backoff jitter between bounded retries -- not a security context, so the
 # standard `random` module is the right choice (secrets would be misuse).
 skips = ["B311"]
