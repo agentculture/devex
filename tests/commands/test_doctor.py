@@ -5,6 +5,7 @@ import pytest
 
 import devex.cli as cli
 from devex import __version__
+from devex.commands.doctor.scripts.next_step import doctor_next_step
 from devex.core.paths import GITIGNORE_CONTENT
 
 
@@ -179,3 +180,98 @@ def test_doctor_role_renders_extra_section(
     assert code == 0, captured.out
     assert "## Role: `pr-review`" in captured.out
     assert fake_section in captured.out
+
+
+# ---------------------------------------------------------------------------
+# Optional --agent + 'Next step:' footer (t3)
+# ---------------------------------------------------------------------------
+
+
+def _write_broken_config(root: Path) -> None:
+    """Create a `.devex/` whose config.toml is malformed → a hard `fail` row."""
+    agex = root / ".devex"
+    agex.mkdir()
+    (agex / "data").mkdir()
+    (agex / ".gitignore").write_text(GITIGNORE_CONTENT, encoding="utf-8")
+    (agex / "config.toml").write_text("invalid = = toml", encoding="utf-8")
+
+
+def _footer_line(out: str) -> str:
+    """Return the trailing 'Next step:' footer block of a doctor report."""
+    marker = "---\n**Next step:**"
+    assert marker in out, "no Next step footer found"
+    return out[out.rindex(marker) :]
+
+
+def test_doctor_clean_emits_neutral_footer_without_agent(in_tmp_cwd: Path, capsys) -> None:
+    """Flagless doctor still exits 0 and now ends with a clean neutral footer."""
+    code = cli.main(["doctor"])
+    captured = capsys.readouterr()
+    assert code == 0
+    footer = _footer_line(captured.out)
+    assert "Setup is healthy" in footer
+    # Neutral phrasing — no concrete backend baked into the footer.
+    assert "--agent <backend>" in footer
+    assert "--agent claude-code" not in footer
+
+
+def test_doctor_clean_emits_backend_footer_with_agent(in_tmp_cwd: Path, capsys) -> None:
+    """With --agent the clean footer uses that backend's doctor hints."""
+    code = cli.main(["doctor", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    footer = _footer_line(captured.out)
+    assert "Setup is healthy" in footer
+    assert "--agent claude-code" in footer
+    assert "--agent <backend>" not in footer
+
+
+def test_doctor_failures_emit_neutral_footer_and_keep_exit_1(in_tmp_cwd: Path, capsys) -> None:
+    """A hard failure → fix-and-rerun neutral footer, still exit 1."""
+    _write_broken_config(in_tmp_cwd)
+    code = cli.main(["doctor"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "failing check(s) above" in captured.out
+    assert "rerun `devex doctor`" in captured.out
+    # Exit code is unchanged by the footer.
+    assert "devex: error:" in captured.err
+
+
+def test_doctor_failures_emit_backend_footer_and_keep_exit_1(in_tmp_cwd: Path, capsys) -> None:
+    """A hard failure with --agent → backend fix-and-rerun footer, still exit 1."""
+    _write_broken_config(in_tmp_cwd)
+    code = cli.main(["doctor", "--agent", "codex"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "failing check(s) above" in captured.out
+    assert "rerun `devex doctor --agent codex`" in captured.out
+
+
+def test_doctor_footer_reports_fail_count(in_tmp_cwd: Path, capsys) -> None:
+    """The failure footer names how many checks need fixing."""
+    _write_broken_config(in_tmp_cwd)
+    cli.main(["doctor", "--agent", "acp"])
+    captured = capsys.readouterr()
+    assert "Fix the 1 failing check(s)" in captured.out
+
+
+def test_doctor_invalid_agent_exits_2(in_tmp_cwd: Path, capsys) -> None:
+    """An explicit but bogus --agent value is rejected with exit 2."""
+    code = cli.main(["doctor", "--agent", "bogus"])
+    captured = capsys.readouterr()
+    assert code == 2
+    assert "unknown backend" in captured.err
+
+
+def test_doctor_agent_does_not_create_agex_dir(in_tmp_cwd: Path) -> None:
+    """doctor stays read-only even with --agent."""
+    cli.main(["doctor", "--agent", "claude-code"])
+    assert not (in_tmp_cwd / ".devex").exists()
+
+
+def test_doctor_next_step_decision_fn() -> None:
+    """The decision fn maps fail counts to the two rule keys + context."""
+    assert doctor_next_step(0) == ("doctor_clean", {})
+    assert doctor_next_step(1) == ("doctor_failures", {"fail_count": 1})
+    assert doctor_next_step(5) == ("doctor_failures", {"fail_count": 5})

@@ -1,0 +1,4 @@
+hints:
+  explain_command: "Run `{{ prog }} {{ topic }} --agent acp` to use it, or `{{ prog }} learn {{ topic }} --agent acp` for a guided lesson."
+  explain_lesson: "Run `{{ prog }} learn {{ topic }} --agent acp` to work through this lesson interactively."
+  explain_concept: "Run `{{ prog }} explain devex` for the command map, then pick a command and run it with `--agent acp`."
