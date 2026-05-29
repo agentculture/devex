@@ -1,6 +1,6 @@
 import pytest
 
-from agent_experience.core.render import render_file, render_string
+from devex.core.render import render_file, render_string
 
 
 def test_render_string_injects_context():

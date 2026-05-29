@@ -1,4 +1,4 @@
-import agent_experience.cli as cli
+import devex.cli as cli
 
 
 def test_explain_agex_prints_self_describing_page(capsys):
@@ -14,7 +14,7 @@ def test_explain_explain_reads_command_skill_md(capsys):
     code = cli.main(["explain", "explain"])
     captured = capsys.readouterr()
     assert code == 0
-    assert "agex explain" in captured.out.lower()
+    assert "devex explain" in captured.out.lower()
 
 
 def test_explain_unknown_topic_exits_2_with_menu(capsys):

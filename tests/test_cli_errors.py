@@ -13,14 +13,14 @@ import sys
 
 import pytest
 
-import agent_experience.cli as cli
-from agent_experience.cli import _KNOWN_COMMANDS, _main_entrypoint
+import devex.cli as cli
+from devex.cli import _KNOWN_COMMANDS, _main_entrypoint
 
 
 def test_unknown_command_emits_agex_page_and_exits_2(tmp_path):
     """An unknown subcommand prints agex explain agex to stdout and exits 2."""
     result = subprocess.run(
-        [sys.executable, "-m", "agent_experience", "frobnicate"],
+        [sys.executable, "-m", "devex", "frobnicate"],
         capture_output=True,
         text=True,
         cwd=tmp_path,
@@ -34,7 +34,7 @@ def test_unknown_command_emits_agex_page_and_exits_2(tmp_path):
 def test_known_command_still_works(tmp_path):
     """A known command (explain agex) still routes correctly and exits 0."""
     result = subprocess.run(
-        [sys.executable, "-m", "agent_experience", "explain", "agex"],
+        [sys.executable, "-m", "devex", "explain", "agex"],
         capture_output=True,
         text=True,
         cwd=tmp_path,
@@ -46,7 +46,7 @@ def test_known_command_still_works(tmp_path):
 def test_version_flag_still_works(tmp_path):
     """The --version flag bypasses the unknown-command handler and exits 0."""
     result = subprocess.run(
-        [sys.executable, "-m", "agent_experience", "--version"],
+        [sys.executable, "-m", "devex", "--version"],
         capture_output=True,
         text=True,
         cwd=tmp_path,
@@ -65,7 +65,7 @@ def test_zero_args_shows_help(tmp_path):
     exact code so a future regression that silently flips this to 0 is caught.
     """
     result = subprocess.run(
-        [sys.executable, "-m", "agent_experience"],
+        [sys.executable, "-m", "devex"],
         capture_output=True,
         text=True,
         cwd=tmp_path,
@@ -102,7 +102,7 @@ def _patch_fake_main(monkeypatch):
         calls.append(argv)
         return 0
 
-    monkeypatch.setattr("agent_experience.cli.main", fake_main)
+    monkeypatch.setattr("devex.cli.main", fake_main)
     return calls
 
 
@@ -147,10 +147,10 @@ def test_known_commands_set_matches_registered_commands():
 
 
 def test_dunder_main_module_imports_cleanly():
-    """Exercise agent_experience/__main__.py so its top-level imports and
+    """Exercise devex/__main__.py so its top-level imports and
     `if __name__ == '__main__'` guard are observed by the coverage tracker."""
     import importlib
 
-    module = importlib.import_module("agent_experience.__main__")
+    module = importlib.import_module("devex.__main__")
     # The module must re-export the real entry point.
     assert module._main_entrypoint is _main_entrypoint

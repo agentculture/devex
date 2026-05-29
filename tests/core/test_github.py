@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_experience.core import github
+from devex.core import github
 
 
 class _FakeCompleted:
@@ -46,18 +46,18 @@ def test_resolve_nick_from_culture_yaml(tmp_path):
 
 
 def test_resolve_nick_falls_back_to_repo_basename(tmp_path):
-    project = tmp_path / "agex-cli"
+    project = tmp_path / "devex-cli"
     project.mkdir()
-    assert github.resolve_nick(project) == "agex-cli"
+    assert github.resolve_nick(project) == "devex-cli"
 
 
 def test_resolve_nick_culture_yaml_without_suffix(tmp_path):
-    project = tmp_path / "agex-cli"
+    project = tmp_path / "devex-cli"
     project.mkdir()
     (project / "culture.yaml").write_text(
         yaml.safe_dump({"agents": [{"name": "a"}]}), encoding="utf-8"
     )
-    assert github.resolve_nick(project) == "agex-cli"
+    assert github.resolve_nick(project) == "devex-cli"
 
 
 def test_pr_create_returns_number(monkeypatch):

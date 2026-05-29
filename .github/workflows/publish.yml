@@ -73,8 +73,9 @@ jobs:
   # because it needs to rewrite the version before building.
   #
   # The matrix exists so we can publish the same code under three PyPI
-  # distribution names: `agex-cli` (canonical) plus the `agent-devex` and
-  # `devex-cli` aliases. Each leg rewrites `[project].name` in pyproject.toml
+  # distribution names: `devex-cli` (canonical) plus the `agent-devex` and
+  # `agex-cli` aliases (`agex-cli` is the legacy canonical name, still
+  # published for back-compat). Each leg rewrites `[project].name` in pyproject.toml
   # before building so each wheel is uploaded under its own Trusted Publishing
   # project.
   # --------------------------------------------------------------------------
@@ -97,9 +98,9 @@ jobs:
       - run: uv venv
       - run: uv pip install build
 
-      # Rewrite `[project].name` to the matrix dist name. For `agex-cli`
+      # Rewrite `[project].name` to the matrix dist name. For `devex-cli`
       # (the canonical dist) the regex still has to match so we re-emit
-      # the line; for `agent-devex` / `devex-cli` it produces an alias dist
+      # the line; for `agent-devex` / `agex-cli` it produces an alias dist
       # with identical contents. The post-rewrite re-parse is a fail-closed
       # check: if a future formatting change breaks the regex match (or
       # `[project].name` ends up wrong for any reason), the job aborts

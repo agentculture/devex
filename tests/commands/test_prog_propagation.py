@@ -6,10 +6,10 @@ their `agex`/`devex` references in Python — they must follow the invoked entry
 point too (regression guard for agex-cli#61 Qodo finding).
 """
 
-from agent_experience.commands.explain.scripts import explain as explain_script
-from agent_experience.commands.learn.scripts import learn as learn_script
-from agent_experience.commands.pr.scripts import delta as delta_script
-from agent_experience.core.backend import Backend
+from devex.commands.explain.scripts import explain as explain_script
+from devex.commands.learn.scripts import learn as learn_script
+from devex.commands.pr.scripts import delta as delta_script
+from devex.core.backend import Backend
 
 
 def test_explain_unknown_topic_error_follows_invocation(monkeypatch):
@@ -38,7 +38,8 @@ def test_pr_delta_no_siblings_follows_invocation(tmp_path, monkeypatch):
     assert "agex" not in stderr
 
 
-def test_pr_delta_no_siblings_defaults_to_agex(tmp_path, monkeypatch):
+def test_pr_delta_agex_alias_invocation_uses_agex(tmp_path, monkeypatch):
+    # The legacy `agex` entry point still resolves to `agex` output.
     monkeypatch.setattr("sys.argv", ["agex"])
     stdout, _, stderr = delta_script.run(agent="claude-code", project_dir=tmp_path)
     assert "# `agex pr delta`" in stdout

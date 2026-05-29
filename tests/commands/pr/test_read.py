@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import agent_experience.cli as cli
-from agent_experience.commands.pr.scripts import _journal
-from agent_experience.core import github
+import devex.cli as cli
+from devex.commands.pr.scripts import _journal
+from devex.core import github
 
 _QODO_FIXTURE = Path(__file__).parent / "fixtures" / "gh" / "qodo_summary_comment.html"
 
@@ -171,7 +171,7 @@ def test_pr_read_surfaces_qodo_findings(monkeypatch, tmp_path, capsys):
     assert code == 0
     assert "## Qodo review" in captured.out
     assert "Orphan honesty" in captured.out
-    assert "src/agent_experience/core/render.py:42-55" in captured.out
+    assert "src/devex/core/render.py:42-55" in captured.out
 
 
 def test_pr_read_flags_collapsed_qodo_when_no_findings(monkeypatch, tmp_path, capsys):
@@ -251,7 +251,7 @@ def test_pr_read_wait_returns_when_ready(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
 
     # Speed up the loop's sleep.
-    from agent_experience.commands.pr.scripts import read as read_script
+    from devex.commands.pr.scripts import read as read_script
 
     monkeypatch.setattr(read_script.time, "sleep", lambda s: None)
 
@@ -302,7 +302,7 @@ def test_pr_read_wait_satisfied_on_entry(monkeypatch, tmp_path, capsys):
     def _fail_sleep(s):  # never reached: short-circuits at waited=0s
         raise AssertionError("should not sleep when ready on entry")
 
-    from agent_experience.commands.pr.scripts import read as read_script
+    from devex.commands.pr.scripts import read as read_script
 
     monkeypatch.setattr(read_script.time, "sleep", _fail_sleep)
 
@@ -334,7 +334,7 @@ def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path, capsy
     monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
-    from agent_experience.commands.pr.scripts import read as read_script
+    from devex.commands.pr.scripts import read as read_script
 
     monkeypatch.setattr(read_script.time, "sleep", lambda s: None)
 
@@ -343,7 +343,7 @@ def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path, capsy
     captured = capsys.readouterr()
     assert code == 0
     assert "Still waiting" in captured.out
-    assert "Rerun `agex pr read 42 --wait 180`" in captured.out
+    assert "Rerun `devex pr read 42 --wait 180`" in captured.out
 
 
 def test_sonar_project_key_env_override(monkeypatch, tmp_path, capsys):

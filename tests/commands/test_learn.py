@@ -1,4 +1,4 @@
-import agent_experience.cli as cli
+import devex.cli as cli
 
 
 def test_learn_menu_lists_introspect(capsys):

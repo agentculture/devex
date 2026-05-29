@@ -4,8 +4,8 @@ import portalocker
 import pytest
 from portalocker.exceptions import AlreadyLocked
 
-from agent_experience.core.hook_io import append_event, load_events, render_table
-from agent_experience.core.paths import ensure_init
+from devex.core.hook_io import append_event, load_events, render_table
+from devex.core.paths import ensure_init
 
 
 def test_append_and_load_roundtrip(tmp_path, monkeypatch):
@@ -34,8 +34,8 @@ def test_append_event_rejects_invalid_stream_name(tmp_path, monkeypatch):
             append_event(bad, {"k": "v"})
         with pytest.raises(ValueError, match="invalid stream name"):
             load_events(bad)
-    # Ensure no stray files landed in .agex/data/
-    assert list((tmp_path / ".agex" / "data").iterdir()) == []
+    # Ensure no stray files landed in .devex/data/
+    assert list((tmp_path / ".devex" / "data").iterdir()) == []
 
 
 def test_load_events_skips_malformed_lines_with_warning(tmp_path, monkeypatch):
@@ -45,7 +45,7 @@ def test_load_events_skips_malformed_lines_with_warning(tmp_path, monkeypatch):
     ensure_init()
     # Write a mix of valid and malformed lines (simulates a partial write
     # or an externally edited data file).
-    data_file = tmp_path / ".agex" / "data" / "post-tool-use.json"
+    data_file = tmp_path / ".devex" / "data" / "post-tool-use.json"
     data_file.parent.mkdir(parents=True, exist_ok=True)
     data_file.write_text(
         '{"ts":"2026-04-18T10:00:00Z","tool":"Read"}\n'
@@ -103,7 +103,7 @@ def test_append_event_retries_on_already_locked(tmp_path, monkeypatch):
     # Import the module so we patch the SAME reference append_event uses.
     # `random.uniform` is intentionally NOT patched — the test only asserts
     # call count and final state, so the jitter value does not matter.
-    from agent_experience.core import hook_io
+    from devex.core import hook_io
 
     monkeypatch.setattr(hook_io.portalocker, "lock", flaky_lock)
     # Patch out sleep so the test finishes instantly
@@ -125,7 +125,7 @@ def test_append_event_gives_up_after_max_attempts(tmp_path, monkeypatch):
 
     # `random.uniform` is intentionally NOT patched — see the companion test
     # for the rationale (only call count and final outcome are asserted).
-    from agent_experience.core import hook_io
+    from devex.core import hook_io
 
     def always_fail(fh, flags):
         raise AlreadyLocked("simulated persistent lock contention")

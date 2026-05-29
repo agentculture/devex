@@ -1,6 +1,6 @@
 import pytest
 
-from agent_experience.core.skill_loader import load_skill
+from devex.core.skill_loader import load_skill
 
 
 def test_load_skill_parses_frontmatter_and_body(tmp_path):

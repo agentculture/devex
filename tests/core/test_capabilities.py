@@ -1,5 +1,5 @@
-from agent_experience.core.backend import Backend
-from agent_experience.core.capabilities import (
+from devex.core.backend import Backend
+from devex.core.capabilities import (
     ISSUE_URL,
     CapabilityMatrix,
     is_supported,

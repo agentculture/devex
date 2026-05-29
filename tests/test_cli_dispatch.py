@@ -8,7 +8,7 @@ observes the branches.
 
 import pytest
 
-import agent_experience.cli as cli
+import devex.cli as cli
 
 
 def test_no_command_prints_usage_and_returns_2(capsys):
@@ -49,12 +49,12 @@ def test_pr_command_bad_agent_reports_value_error(argv, tmp_path, monkeypatch, c
     code = cli.main(argv)
     captured = capsys.readouterr()
     assert code == 2
-    assert captured.err.startswith("agex: ")
+    assert captured.err.startswith("devex: ")
     assert "gemini" in captured.err
 
 
 # Top-level backend commands resolve --agent via parse_backend; an invalid value
-# exercises the shared `agex: error: <msg>` exit-2 branch.
+# exercises the shared `devex: error: <msg>` exit-2 branch.
 @pytest.mark.parametrize(
     "argv",
     [
@@ -69,7 +69,7 @@ def test_backend_command_bad_agent_reports_error(argv, tmp_path, monkeypatch, ca
     code = cli.main(argv)
     captured = capsys.readouterr()
     assert code == 2
-    assert captured.err.startswith("agex: error: ")
+    assert captured.err.startswith("devex: error: ")
     assert "gemini" in captured.err
 
 

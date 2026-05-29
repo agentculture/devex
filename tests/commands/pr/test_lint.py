@@ -1,5 +1,5 @@
-import agent_experience.cli as cli
-from agent_experience.commands.pr.scripts import lint as lint_script
+import devex.cli as cli
+from devex.commands.pr.scripts import lint as lint_script
 
 
 def _stub_git_changes(monkeypatch, files: list[tuple[str, str]]):
@@ -13,7 +13,7 @@ def test_pr_lint_clean_emits_clean_message_and_open_hint(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert code == 0
     assert "no violations" in captured.out.lower()
-    assert "agex pr open" in captured.out
+    assert "devex pr open" in captured.out
 
 
 def test_pr_lint_reports_violations(monkeypatch, capsys):
@@ -41,4 +41,4 @@ def test_pr_lint_alignment_trigger_message(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert code == 0
     assert "alignment" in captured.out.lower()
-    assert "agex pr delta" in captured.out
+    assert "devex pr delta" in captured.out

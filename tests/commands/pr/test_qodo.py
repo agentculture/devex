@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from agent_experience.commands.pr.scripts import _qodo
+from devex.commands.pr.scripts import _qodo
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "gh" / "qodo_summary_comment.html"
 
@@ -32,7 +32,7 @@ def test_parse_findings_title_path_line_link():
     findings = result["findings"]
     first = findings[0]
     assert first["title"] == "1. Orphan honesty rendered"
-    assert first["path"] == "src/agent_experience/core/render.py"
+    assert first["path"] == "src/devex/core/render.py"
     assert first["line"] == "42-55"
     assert first["link"].startswith("https://github.com/")
 

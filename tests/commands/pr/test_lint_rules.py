@@ -1,4 +1,4 @@
-from agent_experience.commands.pr.assets.rules.lint_rules import (
+from devex.commands.pr.assets.rules.lint_rules import (
     Violation,
     check_alignment_trigger,
     check_files,
@@ -30,7 +30,7 @@ def test_dotfile_reference_in_doc_is_violation():
 
 
 def test_dotfile_reference_in_code_is_not_a_violation():
-    files = [_f("src/agent_experience/core/paths.py", 'Path("~/.claude").expanduser()\n')]
+    files = [_f("src/devex/core/paths.py", 'Path("~/.claude").expanduser()\n')]
     assert check_files(files) == []
 
 

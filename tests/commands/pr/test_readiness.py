@@ -1,5 +1,5 @@
-from agent_experience.commands.pr.scripts import _readiness
-from agent_experience.core import github
+from devex.commands.pr.scripts import _readiness
+from devex.core import github
 
 
 def test_thread_tally_counts_total_resolved_unresolved(monkeypatch):

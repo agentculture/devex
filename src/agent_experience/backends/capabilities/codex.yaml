@@ -1,7 +1,0 @@
-hooks: false
-hooks_alternative: |
-  Codex does not expose a hook interface. Wrap your Codex invocation in a shell
-  script that calls `agex hook write` before/after each turn as a workaround.
-mcp: true
-skills: false
-agents: false

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-import agent_experience.cli as cli
+import devex.cli as cli
 
 
 def _setup_skills_local(tmp_path: Path, siblings: list[Path]) -> None:

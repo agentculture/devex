@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-import agent_experience.cli as cli
+import devex.cli as cli
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "claude-code"
 
