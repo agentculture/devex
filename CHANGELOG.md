@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-05-29
+
+### Added
+
+- `devex push` — a top-level command that pushes the current branch, then enters continuous PR management: if the branch has an open PR it runs the same gate-aware readiness wait `pr await` does (default 180s, `--max-wait` overrides) and renders the CI/SonarCloud/threads delta in one invocation; with no open PR it does a plain push and prints a deterministic notice pointing at `pr open`. Push-only (never stages or commits). Per-backend next-step phrasing for all four backends.
+
+### Changed
+
+- design-invariant #4 now names `git push` (push-only) as an allowed side effect of `devex push`, alongside the existing pr-namespace gh/sleep carve-outs.
+- `core/github.py` gains `git_push()` and `current_branch_pr()` helpers.
+
 ## [0.26.0] - 2026-05-29
 
 ### Added
