@@ -27,7 +27,8 @@ jobs:
   # SonarCloud CI-based analysis + coverage. SonarCloud is no longer in
   # Automatic Analysis mode (the two modes are mutually exclusive), so this job
   # is the sole analysis path: it generates coverage.xml (with repo-relative
-  # paths via .coveragerc so Sonar can match files) and runs the scanner, which
+  # paths via pyproject [tool.coverage.run] so Sonar can match files) and runs
+  # the scanner, which
   # reads sonar-project.properties (projectKey / organization / reportPaths)
   # and the SONAR_TOKEN repo secret. Runs on PRs (new-code decoration) and on
   # pushes to main (baseline). fetch-depth: 0 gives Sonar the full history it
@@ -52,7 +53,7 @@ jobs:
           python-version: "3.12"
       - run: uv venv
       - run: uv pip install -e ".[dev]"
-      - run: uv run pytest --cov --cov-report=xml
+      - run: uv run pytest --cov=src/devex --cov-report=xml --cov-report=term
       # Pinned to v6 to match the sibling agentfront repo's working scan.
       # The v7+/v8 scanner engine 404s on `api.sonarcloud.io/analysis/analyses`
       # against SonarQube Cloud; v6 posts to sonarcloud.io directly.

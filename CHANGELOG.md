@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-05-29
+
+### Added
+
+- SonarCloud CI-based analysis + coverage upload: a `sonarcloud` job in test.yml runs `pytest --cov` and the SHA-pinned `sonarqube-scan-action` (v6), reading `sonar-project.properties` + the `SONAR_TOKEN` secret. Coverage config lives in `pyproject.toml [tool.coverage.run]` (`relative_files` so coverage.xml paths map to `sonar.sources=src`).
+
+### Changed
+
+- SonarCloud moved from Automatic Analysis to CI-based analysis (the two are mutually exclusive); project now under the `agentculture` org. Updated CLAUDE.md / sonar-project.properties notes accordingly.
+
 ## [0.26.0] - 2026-05-29
 
 ### Added
