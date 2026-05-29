@@ -16,7 +16,7 @@ from agent_experience.commands.pr.assets.rules.next_step_rules import (
     read_next_step,
     read_wait_timeout_step,
 )
-from agent_experience.commands.pr.scripts import _journal, _qodo, _readiness, _sonar
+from agent_experience.commands.pr.scripts import _deploy, _journal, _qodo, _readiness, _sonar
 from agent_experience.commands.pr.scripts._footer import render_footer
 from agent_experience.core import github
 from agent_experience.core.backend import resolve_backend
@@ -95,6 +95,11 @@ def run(
                     "qodo": qodo,
                     "sonar_gate": None,
                     "sonar_issues": [],
+                    "sonar_hotspots": [],
+                    "deploy_preview": _deploy.preview_url(comments),
+                    "threads_total": 0,
+                    "threads_resolved": 0,
+                    "threads_unresolved": 0,
                     "waiting_for": waiting_for,
                     "footer": footer,
                 },
@@ -109,8 +114,10 @@ def run(
     project_key = _sonar.project_key()
     sonar_gate = github.sonar_quality_gate(project_key, pr_number)
     sonar_issues = github.sonar_new_issues(project_key, pr_number)
+    sonar_hotspots = github.sonar_hotspots(project_key, pr_number)
+    deploy_preview = _deploy.preview_url(comments)
 
-    threads_unresolved = _readiness.threads_unresolved(pr_number)
+    threads_total, threads_resolved, threads_unresolved = _readiness.thread_tally(pr_number)
     journal_events = _journal.load()
     has_recent_commits = _has_recent_local_commits(journal_events, pr_number)
     ci_red = any(c.get("conclusion") == "failure" for c in checks)
@@ -144,6 +151,11 @@ def run(
             "qodo": qodo,
             "sonar_gate": sonar_gate,
             "sonar_issues": sonar_issues,
+            "sonar_hotspots": sonar_hotspots,
+            "deploy_preview": deploy_preview,
+            "threads_total": threads_total,
+            "threads_resolved": threads_resolved,
+            "threads_unresolved": threads_unresolved,
             "waiting_for": [],
             "footer": footer,
         },

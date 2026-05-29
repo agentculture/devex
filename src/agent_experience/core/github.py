@@ -353,3 +353,29 @@ def sonar_new_issues(project_key: str, pr: int) -> list[dict[str, Any]]:
     except json.JSONDecodeError:
         return []
     return list(data.get("issues", []))
+
+
+def sonar_hotspots(project_key: str, pr: int) -> list[dict[str, Any]]:
+    """Query SonarCloud for TO_REVIEW security hotspots in the PR.
+
+    Returns ``[]`` when the project is not registered (404) and, defensively,
+    on any other transient failure or non-JSON body — same enrichment-or-skip
+    contract as :func:`sonar_new_issues`.  Note the hotspots endpoint takes
+    ``projectKey`` (singular), unlike ``/api/issues/search``'s ``projects``.
+    """
+    args = [
+        "api",
+        *_SONAR_HOST_ARGS,
+        "-X",
+        "GET",
+        f"/api/hotspots/search?projectKey={project_key}&pullRequest={pr}&status=TO_REVIEW",
+    ]
+    try:
+        out = _run_gh(args)
+    except RuntimeError:
+        return []
+    try:
+        data = json.loads(out)
+    except json.JSONDecodeError:
+        return []
+    return list(data.get("hotspots", []))

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-05-29
+
+### Added
+
+- `agex pr read` and `pr await` briefings now surface SonarCloud `TO_REVIEW` security hotspots (count alongside the new-issue tally), the Cloudflare Pages `*.pages.dev` deploy-preview URL in the header, and an explicit Total/Resolved/Unresolved review-thread tally under Readiness — all net-additive and skipped cleanly on non-Sonar / non-Cloudflare / no-thread PRs (#52).
+
 ## [0.24.0] - 2026-05-28
 
 ### Added

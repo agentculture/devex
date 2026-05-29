@@ -10,6 +10,7 @@ def _setup(
     checks=None,
     sonar_gate=None,
     sonar_issues=None,
+    sonar_hotspots=None,
     review_threads=None,
 ):
     monkeypatch.setattr(
@@ -28,6 +29,7 @@ def _setup(
     monkeypatch.setattr(github, "pr_comments", lambda pr: comments or [])
     monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: sonar_gate)
     monkeypatch.setattr(github, "sonar_new_issues", lambda *a, **k: sonar_issues or [])
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: sonar_hotspots or [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: review_threads or [])
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
     # Speed up the polling loop.
@@ -167,6 +169,28 @@ def test_await_exit_1_on_unresolved_threads(monkeypatch, tmp_path, capsys):
     captured = capsys.readouterr()
     assert code == 1
     assert "replies.jsonl" in captured.out
+
+
+def test_await_briefing_surfaces_thread_tally_and_hotspots(monkeypatch, tmp_path, capsys):
+    """The await briefing displays the Total/Resolved/Unresolved thread tally and
+    the TO_REVIEW hotspot count; the gate still keys off the unresolved count
+    (here >0 ⇒ exit 1), unchanged by surfacing the tally (#52)."""
+    monkeypatch.chdir(tmp_path)
+    _setup(
+        monkeypatch,
+        comments=[_ready_comment()],
+        sonar_gate={"projectStatus": {"status": "OK"}},
+        sonar_hotspots=[{"key": "h1"}],
+        review_threads=[
+            {"id": "T1", "isResolved": False},
+            {"id": "T2", "isResolved": True},
+        ],
+    )
+    code = cli.main(["pr", "await", "42", "--max-wait", "1", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1  # one unresolved thread still blocks the gate
+    assert "Review threads: **2** total · 1 resolved · 1 unresolved" in captured.out
+    assert "1 security hotspot(s) to review." in captured.out
 
 
 def test_await_resolved_threads_do_not_block(monkeypatch, tmp_path, capsys):
