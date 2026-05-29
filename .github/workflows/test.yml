@@ -36,6 +36,12 @@ jobs:
   sonarcloud:
     name: SonarCloud
     runs-on: ubuntu-latest
+    # Promote a *presence flag* (not the secret) to job env so the scan step
+    # can gate on it — `secrets.*` isn't allowed in `if:`. Lets forks /
+    # token-less runs skip the scan rather than hard-fail. (Pattern from the
+    # sibling agentfront repo, whose CI-based SonarCloud scan is green.)
+    env:
+      SONAR_TOKEN_PRESENT: ${{ secrets.SONAR_TOKEN != '' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
@@ -47,10 +53,12 @@ jobs:
       - run: uv venv
       - run: uv pip install -e ".[dev]"
       - run: uv run pytest --cov --cov-report=xml
-      # Pinned to v5 (classic scanner CLI). v8's scanner engine 404s on
-      # `api.sonarcloud.io/analysis/analyses` against SonarQube Cloud; v5 posts
-      # to sonarcloud.io directly and is the stable pin for Cloud.
-      - uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703  # v5
+      # Pinned to v6 to match the sibling agentfront repo's working scan.
+      # The v7+/v8 scanner engine 404s on `api.sonarcloud.io/analysis/analyses`
+      # against SonarQube Cloud; v6 posts to sonarcloud.io directly.
+      - name: SonarCloud Scan
+        if: env.SONAR_TOKEN_PRESENT == 'true'
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602  # v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
