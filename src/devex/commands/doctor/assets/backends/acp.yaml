@@ -1,0 +1,3 @@
+hints:
+  doctor_clean: "Setup is healthy — proceed with your task (e.g. `{{ prog }} overview --agent acp`)."
+  doctor_failures: "Fix the {{ fail_count }} failing check(s) above, then rerun `{{ prog }} doctor --agent acp` to confirm."

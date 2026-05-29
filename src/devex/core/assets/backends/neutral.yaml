@@ -7,13 +7,31 @@
 #
 # Keys in this file:
 #
-#   example_placeholder   – seed key used by tests; downstream tasks (t3+)
-#                           will add the real explain/doctor neutral hints.
+#   example_placeholder   – seed key used by tests; proves the neutral path is
+#                           wired end-to-end.
+#   explain_command       – `devex explain <cmd>` resolved a command skill.
+#   explain_lesson        – `devex explain <topic>` resolved a learn lesson.
+#   explain_concept       – `devex explain <topic>` resolved a concept page.
+#   doctor_clean          – `devex doctor` found no hard failures (exit 0).
+#   doctor_failures       – `devex doctor` found ≥1 hard failure (exit 1).
+#
+# explain_* hints may reference {{ topic }} (the resolved slug) in addition to
+# {{ prog }}; doctor_failures may reference {{ fail_count }}.
 #
 # When adding a new key, document it here and add a unit test in
 # tests/core/test_footer.py.
 
 hints:
   # Placeholder — proves the neutral path is wired end-to-end.
-  # Real keys for explain/doctor will be added in t3.
   example_placeholder: "Run `{{ prog }} explain <topic>` to learn more, or `{{ prog }} --help` for all commands."
+
+  # `devex explain` (invoked without --agent). Same rule keys as the
+  # per-backend explain YAMLs, neutral phrasing (no `--agent <backend>` paths).
+  explain_command: "Run `{{ prog }} {{ topic }} --agent <backend>` to use it, or `{{ prog }} learn {{ topic }} --agent <backend>` for a guided lesson."
+  explain_lesson: "Run `{{ prog }} learn {{ topic }} --agent <backend>` to work through this lesson interactively."
+  explain_concept: "Run `{{ prog }} explain devex` for the command map, then pick a command and run it with `--agent <backend>`."
+
+  # `devex doctor` (invoked without --agent). Same rule keys as the
+  # per-backend doctor YAMLs, neutral phrasing.
+  doctor_clean: "Setup is healthy — proceed with your task (e.g. `{{ prog }} overview --agent <backend>`)."
+  doctor_failures: "Fix the {{ fail_count }} failing check(s) above, then rerun `{{ prog }} doctor` to confirm."
