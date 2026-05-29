@@ -361,6 +361,39 @@ def sonar_new_issues(project_key: str, pr: int) -> list[dict[str, Any]]:
     return list(data.get("issues", []))
 
 
+def git_push() -> None:
+    """Push the current branch to its remote tracking branch.
+
+    Runs exactly ``git push`` — no commit, rebase, merge, stash, or branch
+    manipulation.  Raises ``RuntimeError`` on a non-zero exit so callers can
+    surface the failure clearly.
+    """
+    result = subprocess.run(  # nosec B603 - fixed argv, no user input
+        ["git", "push"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr_lines = (result.stderr or "").splitlines()
+        first = stderr_lines[0] if stderr_lines else "no stderr"
+        raise RuntimeError(f"git push failed: {first}")
+
+
+def current_branch_pr() -> int | None:
+    """Return the open PR number for the current branch, or ``None``.
+
+    Uses a single ``gh pr view --json`` call (delegating to :func:`pr_view`)
+    and never raises on the no-PR case — the caller can treat ``None`` as
+    "no PR exists yet".
+    """
+    view = pr_view(None)
+    if view is None:
+        return None
+    return int(view["number"])
+
+
 def sonar_hotspots(project_key: str, pr: int) -> list[dict[str, Any]]:
     """Query SonarCloud for TO_REVIEW security hotspots in the PR.
 
