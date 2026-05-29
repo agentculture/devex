@@ -1,0 +1,7 @@
+hooks: false
+hooks_alternative: |
+  GitHub Copilot CLI does not expose a hook interface in v0.1-era versions.
+  Track usage via a shell wrapper that calls `devex hook write`.
+mcp: false
+skills: false
+agents: false

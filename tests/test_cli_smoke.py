@@ -1,7 +1,7 @@
 import pytest
 
-import agent_experience.cli as cli
-from agent_experience import __version__
+import devex.cli as cli
+from devex import __version__
 
 
 def test_version_flag(capsys):

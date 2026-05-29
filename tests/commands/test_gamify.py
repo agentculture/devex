@@ -1,7 +1,7 @@
 import json
 
-import agent_experience.cli as cli
-from agent_experience.core.config import load as load_config
+import devex.cli as cli
+from devex.core.config import load as load_config
 
 
 def test_gamify_install_writes_hooks_and_config(tmp_path, monkeypatch, capsys):

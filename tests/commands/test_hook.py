@@ -1,4 +1,4 @@
-import agent_experience.cli as cli
+import devex.cli as cli
 
 
 def test_hook_write_is_silent_and_creates_file(tmp_path, monkeypatch, capsys):
@@ -7,7 +7,7 @@ def test_hook_write_is_silent_and_creates_file(tmp_path, monkeypatch, capsys):
     captured = capsys.readouterr()
     assert code == 0
     assert captured.out == ""
-    assert (tmp_path / ".agex" / "data" / "post-tool-use.json").exists()
+    assert (tmp_path / ".devex" / "data" / "post-tool-use.json").exists()
 
 
 def test_hook_read_renders_table_with_source(tmp_path, monkeypatch, capsys):
@@ -34,7 +34,7 @@ def test_hook_write_drops_empty_key_pairs(tmp_path, monkeypatch, capsys):
     capsys.readouterr()
     assert code == 0
     line = (
-        (tmp_path / ".agex" / "data" / "post-tool-use.json")
+        (tmp_path / ".devex" / "data" / "post-tool-use.json")
         .read_text(encoding="utf-8")
         .splitlines()[0]
     )
@@ -54,14 +54,14 @@ def test_hook_read_empty_shows_no_events(tmp_path, monkeypatch, capsys):
 
 def test_hook_read_discovers_nested_jsonl(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    from agent_experience.core import journal as core_journal
-    from agent_experience.core.paths import ensure_init
+    from devex.core import journal as core_journal
+    from devex.core.paths import ensure_init
 
     ensure_init()
     core_journal.append_event("pr/events", {"type": "pr_opened", "pr": 42})
 
-    from agent_experience.commands.hook.scripts import read as hook_read
-    from agent_experience.core.backend import Backend
+    from devex.commands.hook.scripts import read as hook_read
+    from devex.core.backend import Backend
 
     stdout, exit_code, _ = hook_read.run(backend=Backend.CLAUDE_CODE)
     assert exit_code == 0
@@ -78,4 +78,4 @@ def test_hook_write_rejects_path_traversal(tmp_path, monkeypatch, capsys):
         assert code == 2, f"expected exit 2 for event={bad!r}"
         assert "invalid stream name" in captured.err.lower()
         # The bad name must never land on disk.
-        assert not any((tmp_path / ".agex" / "data").rglob(f"*{bad.split('/')[-1]}*"))
+        assert not any((tmp_path / ".devex" / "data").rglob(f"*{bad.split('/')[-1]}*"))

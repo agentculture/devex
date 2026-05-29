@@ -1,6 +1,6 @@
-import agent_experience.cli as cli
-from agent_experience.commands.pr.scripts import _journal
-from agent_experience.core import github
+import devex.cli as cli
+from devex.commands.pr.scripts import _journal
+from devex.core import github
 
 
 def _setup(
@@ -33,7 +33,7 @@ def _setup(
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: review_threads or [])
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
     # Speed up the polling loop.
-    from agent_experience.commands.pr.scripts import await_ as await_script
+    from devex.commands.pr.scripts import await_ as await_script
 
     monkeypatch.setattr(await_script.time, "sleep", lambda s: None)
 
@@ -248,7 +248,7 @@ def test_await_timeout_exits_0_with_still_waiting(monkeypatch, tmp_path, capsys)
     captured = capsys.readouterr()
     assert code == 0
     assert "Still waiting" in captured.out
-    assert "Rerun `agex pr await 42`" in captured.out
+    assert "Rerun `devex pr await 42`" in captured.out
     events = _journal.load()
     assert any(e["type"] == "pr_await" and e.get("outcome") == "timeout" for e in events)
 

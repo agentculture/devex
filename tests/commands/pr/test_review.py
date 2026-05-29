@@ -1,9 +1,9 @@
 from pathlib import Path
 
-import agent_experience
-import agent_experience.cli as cli
-from agent_experience.commands.pr.scripts import _journal, review
-from agent_experience.core import github
+import devex
+import devex.cli as cli
+from devex.commands.pr.scripts import _journal, review
+from devex.core import github
 
 
 def test_package_never_emits_deprecated_improve_command():
@@ -15,7 +15,7 @@ def test_package_never_emits_deprecated_improve_command():
     only to say it's deprecated (e.g. SKILL.md, the review.py docstring) is
     allowed; what's forbidden is emitting it as a value.
     """
-    pkg_root = Path(agent_experience.__file__).parent
+    pkg_root = Path(devex.__file__).parent
     forbidden = ('"/improve"', "'/improve'")
     offenders = []
     for p in pkg_root.rglob("*"):

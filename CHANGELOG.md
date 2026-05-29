@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-05-29
+
+### Added
+
+- **`devex pr await <PR> --detach` / `--check`** — non-blocking await (#64). `--detach` forks a detached background poller that runs the same readiness → CI → Sonar-gate → thread-tally logic, writes the verdict to a marker (`.devex/data/pr/<PR>/await.json`, atomic `os.replace`), and returns immediately — taking the in-session `time.sleep` (and the prompt-cache re-read tax past the ~5-min TTL) out of the agent's context. `--check` reads that marker back without sleeping or re-polling: the stored briefing + the same non-zero-on-blocked exit code when done, a "still polling (started Ns ago)" notice while running, and a clear notice (never a crash or false "clean") when no run exists or the marker schema is incompatible. The detached worker always leaves a marker — even on `gh` failure, and even if the spawn itself fails — so `--check` is never left hanging. The two flags are mutually exclusive. New per-backend footer keys (`await_detached`, `await_check_pending`, `await_check_missing`, `await_check_incompatible`) ship for all four backends.
+- **`devex pr open --detached-await`** — auto-wait at open time: after creating the PR (and posting the Qodo trigger), fork the detached `pr await` poller and return immediately, so "open → walk away → `pr await <PR> --check`" is one command. The non-blocking counterpart to `--delayed-read` (the two are mutually exclusive).
+
+### Changed
+
+- **Renamed the tool from `agex` to `devex` end to end** — `devex` is now the canonical command, `devex-cli` the canonical PyPI distribution, and the Python module is `devex` (was `agent_experience`). The on-disk state directory is `.devex/` (was `.agex/`), with a transparent read-fallback to a pre-existing `.agex/` and a one-time migration on first write. **`agex` stays a fully working, non-breaking alias**: the `agex` console script and `agex-cli` distribution are still published, `agex` is still recognized as an invoked name, and `devex explain agex` resolves to the overview page. Kept stable for back-compat: the `agex_version` config-file key, the `agex:` gamify hook-fragment IDs, and the `agex hook write` command in the shipped hook asset.
+
 ## [0.25.0] - 2026-05-29
 
 ### Added

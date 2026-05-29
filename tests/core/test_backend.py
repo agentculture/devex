@@ -1,6 +1,6 @@
 import pytest
 
-from agent_experience.core.backend import Backend, parse_backend
+from devex.core.backend import Backend, parse_backend
 
 
 def test_backend_enum_values():

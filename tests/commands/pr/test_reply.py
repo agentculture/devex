@@ -1,9 +1,9 @@
 import io
 import json
 
-import agent_experience.cli as cli
-from agent_experience.commands.pr.scripts import _journal
-from agent_experience.core import github
+import devex.cli as cli
+from devex.commands.pr.scripts import _journal
+from devex.core import github
 
 _REPLY_ARGV = ["pr", "reply", "42", "--agent", "claude-code"]
 
@@ -25,7 +25,7 @@ def _setup_post(monkeypatch, *, post_returns=None, post_side_effect=None):
 
     monkeypatch.setattr(github, "pr_post_comment", fake_post)
     monkeypatch.setattr(github, "pr_resolve_thread", lambda tid: resolved.append(tid))
-    monkeypatch.setattr(github, "resolve_nick", lambda d: "agex-cli")
+    monkeypatch.setattr(github, "resolve_nick", lambda d: "devex-cli")
     return posted, resolved
 
 
@@ -45,7 +45,7 @@ def test_pr_reply_posts_and_resolves(monkeypatch, tmp_path):
     assert len(posted) == 2
     assert resolved == ["T1", "T2"]
     # Auto-signed
-    assert all("- agex-cli (Claude)" in body for _, body, _ in posted)
+    assert all("- devex-cli (Claude)" in body for _, body, _ in posted)
     # Journal
     types = [e["type"] for e in _journal.load()]
     assert types.count("pr_reply") == 2
@@ -55,11 +55,11 @@ def test_pr_reply_posts_and_resolves(monkeypatch, tmp_path):
 def test_pr_reply_does_not_double_sign(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     posted, _ = _setup_post(monkeypatch)
-    body = "already signed\n\n- agex-cli (Claude)\n"
+    body = "already signed\n\n- devex-cli (Claude)\n"
     jsonl = json.dumps({"in_reply_to": 1, "body": body})
     _feed_stdin(monkeypatch, jsonl)
     cli.main(_REPLY_ARGV)
-    assert posted[0][1].count("- agex-cli (Claude)") == 1
+    assert posted[0][1].count("- devex-cli (Claude)") == 1
 
 
 def test_pr_reply_partial_failure_renders_resubmit_table(monkeypatch, tmp_path, capsys):
@@ -127,7 +127,7 @@ def test_pr_reply_non_dict_jsonl_line(monkeypatch, tmp_path, capsys):
 
 def test_pr_reply_handles_gh_runtime_error(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(github, "resolve_nick", lambda d: "agex-cli")
+    monkeypatch.setattr(github, "resolve_nick", lambda d: "devex-cli")
 
     def _raise_rate_limited(**k):
         raise RuntimeError("gh failed: rate limited")

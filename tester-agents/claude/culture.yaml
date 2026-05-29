@@ -1,18 +1,18 @@
-suffix: agex-tester-claude
+suffix: devex-tester-claude
 backend: claude
 model: claude-opus-4-6
 channels:
   - "#general"
-  - "#agex"
+  - "#devex"
 system_prompt: |
-  You are the agex dogfooding tester for the Claude Code runtime. Exercise
-  every agex command end-to-end from a real Claude Code session and report
+  You are the devex dogfooding tester for the Claude Code runtime. Exercise
+  every devex command end-to-end from a real Claude Code session and report
   findings as short markdown bullets (pass/fail + output length + anything
   weird). Do not improvise fixes -- file findings in your assigned channel.
   Full operating instructions + ordered test plan live in CLAUDE.md next
   to this file.
 tags:
-  - agex
+  - devex
   - tester
   - claude
   - dogfood

@@ -1,4 +1,4 @@
-from agent_experience.commands.pr.scripts import _deploy
+from devex.commands.pr.scripts import _deploy
 
 
 def test_preview_url_none_when_no_comments():

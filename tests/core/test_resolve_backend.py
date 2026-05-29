@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_experience.core.backend import Backend, resolve_backend
+from devex.core.backend import Backend, resolve_backend
 
 
 def test_explicit_arg_wins(tmp_path: Path) -> None:
@@ -44,7 +44,7 @@ def test_explicit_arg_claude_alias(tmp_path: Path) -> None:
 
 def test_culture_yaml_claude_alias(tmp_path: Path) -> None:
     (tmp_path / "culture.yaml").write_text(
-        yaml.safe_dump({"agents": [{"suffix": "agex-cli", "backend": "claude"}]}),
+        yaml.safe_dump({"agents": [{"suffix": "devex-cli", "backend": "claude"}]}),
         encoding="utf-8",
     )
     assert resolve_backend(None, tmp_path) is Backend.CLAUDE_CODE

@@ -19,7 +19,7 @@ from importlib.resources import as_file, files
 
 import pytest
 
-from agent_experience.core.skill_loader import load_skill
+from devex.core.skill_loader import load_skill
 
 _VALID_TYPES = frozenset({"command", "lesson"})
 
@@ -28,7 +28,7 @@ def _all_skill_md_relpaths() -> list[str]:
     """Return relative paths (strings) of every SKILL.md under the commands
     package. Strings survive across `as_file()` boundaries; Path objects
     captured inside the context do not."""
-    with as_file(files("agent_experience.commands")) as root:
+    with as_file(files("devex.commands")) as root:
         return sorted("/".join(p.relative_to(root).parts) for p in root.glob("**/SKILL.md"))
 
 
@@ -42,10 +42,9 @@ def _all_skill_md_relpaths() -> list[str]:
 def test_meta_test_discovers_all_known_skills() -> None:
     """Verify that at least 10 SKILL.md files are found (6 commands + 4 lessons)."""
     relpaths = _all_skill_md_relpaths()
-    assert len(relpaths) >= 10, (
-        f"Expected >= 10 SKILL.md files under agent_experience.commands, "
-        f"found {len(relpaths)}: {relpaths}"
-    )
+    assert (
+        len(relpaths) >= 10
+    ), f"Expected >= 10 SKILL.md files under devex.commands, found {len(relpaths)}: {relpaths}"
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +55,7 @@ def test_meta_test_discovers_all_known_skills() -> None:
 @pytest.mark.parametrize("relpath", _all_skill_md_relpaths(), ids=str)
 def test_skill_md_has_valid_frontmatter(relpath: str) -> None:
     """Each SKILL.md must parse without error and have name, description, and type."""
-    with as_file(files("agent_experience.commands")) as commands_root:
+    with as_file(files("devex.commands")) as commands_root:
         skill_path = commands_root / relpath
         skill = load_skill(skill_path)
     assert skill.name, f"{relpath}: 'name' frontmatter field is empty"
@@ -73,8 +72,8 @@ def test_skill_md_has_valid_frontmatter(relpath: str) -> None:
 
 def test_every_command_has_skill_md() -> None:
     """Each of the six top-level commands must ship a SKILL.md."""
-    with as_file(files("agent_experience.commands")) as commands_root:
+    with as_file(files("devex.commands")) as commands_root:
         for cmd in ("explain", "overview", "learn", "gamify", "hook", "doctor"):
             assert (
                 commands_root / cmd / "SKILL.md"
-            ).is_file(), f"{cmd}/SKILL.md is missing from agent_experience.commands"
+            ).is_file(), f"{cmd}/SKILL.md is missing from devex.commands"

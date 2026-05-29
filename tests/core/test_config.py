@@ -1,6 +1,6 @@
-from agent_experience import __version__
-from agent_experience.core.config import Config, load, save
-from agent_experience.core.paths import ensure_init
+from devex import __version__
+from devex.core.config import Config, load, save
+from devex.core.paths import ensure_init
 
 
 def test_load_returns_empty_when_missing(tmp_path, monkeypatch):

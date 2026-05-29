@@ -1,0 +1,29 @@
+{% if state == "started" -%}
+# PR #{{ pr }} — detached await started
+
+A background poller is now watching PR #{{ pr }} (up to {{ max_wait }}s). This
+session is **not** blocked — go do other work and read the verdict when ready.
+
+- Marker: `{{ marker }}`
+{% elif state == "polling" -%}
+# PR #{{ pr }} — still polling
+
+The detached await for PR #{{ pr }} is still running (started {{ elapsed }}s ago).
+No verdict yet.
+
+- Marker: `{{ marker }}`
+{% elif state == "missing" -%}
+# PR #{{ pr }} — no detached await
+
+No detached-await marker found for PR #{{ pr }}.
+
+- Expected marker: `{{ marker }}`
+{% else -%}
+# PR #{{ pr }} — incompatible marker
+
+The detached-await marker for PR #{{ pr }} was written by an incompatible
+version of `{{ prog }}`.
+
+- Marker: `{{ marker }}`
+{% endif %}
+{{ footer }}

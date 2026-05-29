@@ -2,7 +2,7 @@
 
 import pytest
 
-from agent_experience.core.prog import error_prefix, prog_name
+from devex.core.prog import error_prefix, prog_name
 
 
 @pytest.mark.parametrize(
@@ -23,9 +23,9 @@ from agent_experience.core.prog import error_prefix, prog_name
         ("devex.py", "devex"),
         # Anything that isn't one of the two real entry points falls back to
         # the canonical name so rendered output / tests stay deterministic.
-        ("/usr/bin/python", "agex"),
-        ("pytest", "agex"),
-        ("", "agex"),
+        ("/usr/bin/python", "devex"),
+        ("pytest", "devex"),
+        ("", "devex"),
     ],
 )
 def test_prog_name_resolves_from_argv0(monkeypatch, argv0, expected):
