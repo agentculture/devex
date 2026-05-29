@@ -1,5 +1,79 @@
 import devex.cli as cli
 
+# ---------------------------------------------------------------------------
+# t7: Next step footer for hook read (hook write stays silent)
+# ---------------------------------------------------------------------------
+
+
+def test_hook_read_has_footer_with_events(tmp_path, monkeypatch, capsys):
+    """hook read with events emits a '**Next step:**' footer."""
+    monkeypatch.chdir(tmp_path)
+    cli.main(["hook", "write", "post-tool-use", "tool=Read"])
+    capsys.readouterr()
+    code = cli.main(["hook", "read", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "**Next step:**" in captured.out
+
+
+def test_hook_read_has_footer_when_empty(tmp_path, monkeypatch, capsys):
+    """hook read with no events still emits a '**Next step:**' footer."""
+    monkeypatch.chdir(tmp_path)
+    code = cli.main(["hook", "read", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "**Next step:**" in captured.out
+
+
+def test_hook_read_empty_footer_mentions_overview(tmp_path, monkeypatch, capsys):
+    """hook read with no events references 'overview' in its footer hint."""
+    monkeypatch.chdir(tmp_path)
+    cli.main(["hook", "read", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert "overview" in captured.out
+
+
+def test_hook_read_footer_all_backends(tmp_path, monkeypatch, capsys):
+    """hook read emits a footer for every supported backend."""
+    for backend in ("claude-code", "codex", "copilot", "acp"):
+        monkeypatch.chdir(tmp_path)
+        code = cli.main(["hook", "read", "--agent", backend])
+        captured = capsys.readouterr()
+        assert code == 0, f"hook read failed for backend={backend!r}"
+        assert "**Next step:**" in captured.out, f"no footer for backend={backend!r}"
+
+
+def test_hook_write_stays_silent_after_t7(tmp_path, monkeypatch, capsys):
+    """hook write MUST emit empty stdout — the t7 footer must NOT appear there."""
+    monkeypatch.chdir(tmp_path)
+    code = cli.main(["hook", "write", "post-tool-use", "tool=Bash"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.out == "", "hook write must stay silent; got: " + repr(captured.out[:200])
+    assert "**Next step:**" not in captured.out
+
+
+def test_hook_read_next_step_has_events_rule_key(tmp_path, monkeypatch):
+    """hook_read_next_step returns 'hook_read_has_events' when events exist."""
+    monkeypatch.chdir(tmp_path)
+    from devex.commands.hook.scripts.next_step import hook_read_next_step
+
+    key, ctx = hook_read_next_step(has_events=True)
+    assert key == "hook_read_has_events"
+
+
+def test_hook_read_next_step_empty_rule_key(tmp_path, monkeypatch):
+    """hook_read_next_step returns 'hook_read_empty' when no events exist."""
+    from devex.commands.hook.scripts.next_step import hook_read_next_step
+
+    key, ctx = hook_read_next_step(has_events=False)
+    assert key == "hook_read_empty"
+
+
+# ---------------------------------------------------------------------------
+# Existing tests below
+# ---------------------------------------------------------------------------
+
 
 def test_hook_write_is_silent_and_creates_file(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
