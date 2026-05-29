@@ -22,13 +22,13 @@ from devex.commands.hook.scripts import write as hook_write_script
 from devex.commands.learn.scripts import learn as learn_script
 from devex.commands.overview.scripts import overview as overview_script
 from devex.commands.pr.scripts import await_ as pr_await_script
-from devex.commands.push.scripts import push as push_script
 from devex.commands.pr.scripts import delta as pr_delta_script
 from devex.commands.pr.scripts import lint as pr_lint_script
 from devex.commands.pr.scripts import open_ as pr_open_script
 from devex.commands.pr.scripts import read as pr_read_script
 from devex.commands.pr.scripts import reply as pr_reply_script
 from devex.commands.pr.scripts import review as pr_review_script
+from devex.commands.push.scripts import push as push_script
 from devex.core.backend import parse_backend
 from devex.core.prog import prog_name
 
@@ -143,7 +143,9 @@ def _cmd_push(args: argparse.Namespace) -> int:
     except RuntimeError as exc:
         prog = prog_name()
         print(str(exc), file=sys.stderr)
-        print(f"{prog}: rerun '{prog} push' once the branch is in a pushable state", file=sys.stderr)
+        print(
+            f"{prog}: rerun '{prog} push' once the branch is in a pushable state", file=sys.stderr
+        )
         return 1
     _emit(stdout, stderr)
     return exit_code

@@ -157,6 +157,7 @@ def test_push_runs_non_interactively(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     # stdin is closed — a truly non-interactive run must not block on it.
     import io
+
     monkeypatch.setattr("sys.stdin", io.StringIO(""))
     with patch("devex.cli.push_script.run", return_value=("result\n", 0, "")):
         code = cli.main(["push", "--agent", "claude-code"])

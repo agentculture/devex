@@ -21,7 +21,6 @@ from devex.commands.push.scripts.push import _hint, _load_hints
 from devex.core.backend import Backend
 from devex.core.render import render_string
 
-
 # All four backends the all-backends rule requires.
 ALL_BACKENDS = [
     Backend.CLAUDE_CODE,
@@ -59,9 +58,9 @@ def test_hint_renders_to_non_empty_string(backend: Backend, key: str) -> None:
     A missing/blank template would yield an empty string and also fail.
     """
     rendered = _hint(backend, key)
-    assert isinstance(rendered, str), (
-        f"{backend.value}[{key}]: _hint returned non-str {type(rendered)}"
-    )
+    assert isinstance(
+        rendered, str
+    ), f"{backend.value}[{key}]: _hint returned non-str {type(rendered)}"
     assert rendered.strip(), (
         f"{backend.value}[{key}]: _hint rendered to empty — "
         "set a non-empty template in the yaml (post_wait may be '' only if that is intentional, "
