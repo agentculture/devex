@@ -28,6 +28,7 @@ from devex.commands.pr.scripts import open_ as pr_open_script
 from devex.commands.pr.scripts import read as pr_read_script
 from devex.commands.pr.scripts import reply as pr_reply_script
 from devex.commands.pr.scripts import review as pr_review_script
+from devex.commands.push.scripts import push as push_script
 from devex.core.backend import parse_backend
 from devex.core.prog import prog_name
 
@@ -147,6 +148,32 @@ def _cmd_overview(args: argparse.Namespace) -> int:
     if err is not None:
         return err
     stdout, exit_code, stderr = overview_script.run(backend)
+    _emit(stdout, stderr)
+    return exit_code
+
+
+def _cmd_push(args: argparse.Namespace) -> int:
+    try:
+        stdout, exit_code, stderr = push_script.run(
+            agent=args.agent, max_wait=args.max_wait, project_dir=Path.cwd()
+        )
+    except ValueError as exc:
+        print(f"{prog_name()}: {exc}", file=sys.stderr)
+        return 2
+    except RuntimeError as exc:
+        prog = prog_name()
+        print(str(exc), file=sys.stderr)
+        if str(exc).startswith("gh failed:"):
+            # PR detection (`gh pr view`) failed *after* a successful push —
+            # a gh/network problem, not a git-push one. Don't tell the agent to
+            # rerun `push` (that would push again); point at the gh hint.
+            print(_gh_rerun_hint(), file=sys.stderr)
+        else:
+            print(
+                f"{prog}: rerun '{prog} push' once the branch is in a pushable state",
+                file=sys.stderr,
+            )
+        return 1
     _emit(stdout, stderr)
     return exit_code
 
@@ -368,6 +395,26 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_agent_option(p_overview, required=True, help_text=_AGENT_HELP)
     p_overview.set_defaults(func=_cmd_overview)
 
+    # push
+    p_push = sub.add_parser(
+        "push",
+        help=(
+            "Push the current branch; if it has an open PR, wait for review "
+            "readiness and render the delta."
+        ),
+    )
+    p_push.add_argument(
+        "--max-wait",
+        type=int,
+        default=180,
+        help=(
+            "Upper bound in seconds to poll for required-reviewer readiness; "
+            "returns early (down to waited=0s) once satisfied (default 180)."
+        ),
+    )
+    _add_agent_option(p_push, required=True, help_text=_AGENT_HELP)
+    p_push.set_defaults(func=_cmd_push)
+
     _register_hook(sub)
     _register_pr(sub)
 
@@ -521,7 +568,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 # Keep in sync with the sub.add_parser registrations above.
 # If a new top-level command is added, extend this set so _main_entrypoint
 # stops routing it to the unknown-command fallback page.
-_KNOWN_COMMANDS = {"explain", "overview", "learn", "gamify", "hook", "doctor", "pr"}
+_KNOWN_COMMANDS = {"explain", "overview", "learn", "gamify", "hook", "doctor", "pr", "push"}
 
 
 def _main_entrypoint() -> None:
