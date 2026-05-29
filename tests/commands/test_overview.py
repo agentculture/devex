@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 import devex.cli as cli
-from devex.commands.overview.scripts.next_step import overview_next_step
 from devex.commands.overview.scripts._footer import render_footer
+from devex.commands.overview.scripts.next_step import overview_next_step
 from devex.core.backend import Backend
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "claude-code"

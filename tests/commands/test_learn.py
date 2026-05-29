@@ -1,7 +1,6 @@
 import devex.cli as cli
 from devex.commands.learn.scripts.next_step import learn_next_step
 
-
 # ---------------------------------------------------------------------------
 # Unit tests for learn_next_step decision function
 # ---------------------------------------------------------------------------
