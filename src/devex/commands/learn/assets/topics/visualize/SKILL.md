@@ -25,3 +25,5 @@ Write the file shown below to the path noted above its fence. This skill is inte
 ## Step 3 — invoke it
 
 Say "what do I have" or "show the setup" and invoke `/visualize` (or equivalent). You'll get a compact status bar.
+
+{{ footer }}
