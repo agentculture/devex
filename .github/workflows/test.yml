@@ -24,6 +24,35 @@ jobs:
       - run: uv run pytest
 
   # --------------------------------------------------------------------------
+  # SonarCloud CI-based analysis + coverage. SonarCloud is no longer in
+  # Automatic Analysis mode (the two modes are mutually exclusive), so this job
+  # is the sole analysis path: it generates coverage.xml (with repo-relative
+  # paths via .coveragerc so Sonar can match files) and runs the scanner, which
+  # reads sonar-project.properties (projectKey / organization / reportPaths)
+  # and the SONAR_TOKEN repo secret. Runs on PRs (new-code decoration) and on
+  # pushes to main (baseline). fetch-depth: 0 gives Sonar the full history it
+  # needs for accurate new-code / blame attribution.
+  # --------------------------------------------------------------------------
+  sonarcloud:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: "3.12"
+      - run: uv venv
+      - run: uv pip install -e ".[dev]"
+      - run: uv run pytest --cov --cov-report=xml
+      - uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995  # v8.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+  # --------------------------------------------------------------------------
   # Enforces that every PR touching code (src/, tests/, pyproject.toml) also
   # bumps the version in pyproject.toml. Without this, a merge to main that
   # forgot to bump would silently try to republish the existing PyPI release

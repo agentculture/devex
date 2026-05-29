@@ -1,0 +1,11 @@
+# Coverage config for the SonarCloud CI scan (.github/workflows/test.yml).
+#
+# `relative_files = True` + `source = src/devex` makes coverage.xml emit
+# `<source>src/devex</source>` with package-relative filenames (e.g. `cli.py`),
+# which SonarCloud resolves to `src/devex/cli.py` against `sonar.sources=src`.
+# Without relative_files, coverage writes an absolute CI path as <source> and
+# SonarCloud cannot match the report to the analyzed files (coverage imports
+# as 0%). See sonar-project.properties (sonar.python.coverage.reportPaths).
+[run]
+relative_files = True
+source = src/devex

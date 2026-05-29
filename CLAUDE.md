@@ -78,15 +78,15 @@ uv run devex --version
 uv run devex explain devex
 uv run devex explain explain
 
-# Coverage (matches what build.yml runs; SonarCloud reads this file)
+# Coverage (matches the `sonarcloud` job in test.yml; SonarCloud reads coverage.xml)
 uv run pytest --cov=src/devex --cov-report=xml --cov-report=term
 ```
 
 ## CI surface
 
-- `.github/workflows/test.yml` — matrix: 3 OS × 4 Python (3.10–3.13) running `uv run pytest`. Also runs a `version-check` job on PRs that fails (with a sticky `<!-- version-check -->` comment) when `pyproject.toml`'s version on the PR matches the one on `main` and any code file under `src/` / `tests/` / `pyproject.toml` changed. Docs-only PRs skip the check.
+- `.github/workflows/test.yml` — matrix: 3 OS × 4 Python (3.10–3.13) running `uv run pytest`. Also runs (1) a `sonarcloud` job that generates `coverage.xml` (`pytest --cov`, repo-relative paths via `.coveragerc`) and runs the SHA-pinned `sonarqube-scan-action` (needs the `SONAR_TOKEN` repo secret); and (2) a `version-check` job on PRs that fails (with a sticky `<!-- version-check -->` comment) when `pyproject.toml`'s version on the PR matches the one on `main` and any code file under `src/` / `tests/` / `pyproject.toml` changed. Docs-only PRs skip the version check.
 - `.github/workflows/publish.yml` — builds sdist + wheel. PRs publish a per-PR dev version to TestPyPI (sticky install-command comment); pushes to `main` publish the stable version to TestPyPI (canary), then an `autotag` job pushes `v<version>` if missing, which gates the inline `publish-pypi` + `github-release` jobs. No manual tagging — bumping `pyproject.toml` is the release signal.
-- SonarCloud is configured as **Automatic Analysis** on the repo (no CI workflow). Coverage and quality are read by SonarCloud directly.
+- SonarCloud runs in **CI-based analysis** mode (Automatic Analysis is off — the two are mutually exclusive). The `sonarcloud` job in `test.yml` uploads coverage + triggers the scan via `sonarqube-scan-action`, reading `sonar-project.properties` and the `SONAR_TOKEN` secret. The quality gate decorates PRs and gates merges.
 - All third-party actions are **pinned to full commit SHAs** with trailing `# vN` comments (rule `githubactions:S7637`). Keep new actions pinned the same way.
 
 ## SonarCloud notes
