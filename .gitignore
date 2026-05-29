@@ -213,3 +213,8 @@ __marimo__/
 
 # Worktrees
 .worktrees/
+
+# devague working state (not committed by default)
+.devague/questions/
+
+.devague/reviews/

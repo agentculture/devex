@@ -1,0 +1,259 @@
+{
+  "slug": "devex-now-turns-a-push-into-continuous-pr-manageme",
+  "title": "devex now turns a push into continuous PR management: when you push commits to a branch that already has an open PR, devex automatically enters the same review-readiness wait a new PR gets (the ~3-minute poll), so follow-up commits get triaged without a manual step \u2014 and a push to a branch with no PR stays an ordinary push.",
+  "schema_version": 1,
+  "status": "exported",
+  "created": "2026-05-29T11:17:22Z",
+  "updated": "2026-05-29T11:31:35Z",
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "announcement",
+      "text": "devex now turns a push into continuous PR management: when you push commits to a branch that already has an open PR, devex automatically enters the same review-readiness wait a new PR gets (the ~3-minute poll), so follow-up commits get triaged without a manual step \u2014 and a push to a branch with no PR stays an ordinary push.",
+      "origin": "user",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h4",
+          "text": "Shipped behavior is exactly: push current branch; if it has an open PR, enter the new-PR-style ~180s readiness wait and render the delta; else plain push + a notice.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [
+        {
+          "id": "q3",
+          "text": "Does the command also 'git commit' (commit-push) or only 'git push' already-committed work? The user is unsure ('commit-pushing / just pushing').",
+          "resolved": true,
+          "blocking": false
+        }
+      ],
+      "links": []
+    },
+    {
+      "id": "c2",
+      "kind": "audience",
+      "text": "An agent (or human via an agent) running devex inside a repo mid-PR, who has just committed follow-up changes on a branch that already has an open PR and wants CI/review feedback picked up automatically.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h5",
+          "text": "The primary caller is an agent in an automated PR loop; the command needs no interactive input to choose the managed-vs-plain path.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c3",
+      "kind": "after_state",
+      "text": "Pushing follow-up commits to a branch with an open PR automatically enters the same review-readiness wait a new PR gets (~3-minute poll), with no separate manual 'pr await' / 'pr read --wait' step.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h6",
+          "text": "Post-push triage takes zero extra commands: the wait + delta render are part of the single 'devex push' invocation.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [
+        {
+          "id": "q2",
+          "text": "Is the wait blocking the agent session (like --delayed-read) or detached (like --detached-await/await --detach)? Continuous management argues for detached + later --check.",
+          "resolved": true,
+          "blocking": false
+        }
+      ],
+      "links": []
+    },
+    {
+      "id": "c4",
+      "kind": "before_state",
+      "text": "Today there is no push command. After pushing, the agent must remember to manually run 'pr await' / 'pr read --wait' to re-enter triage \u2014 easy to forget, so continuous PR management silently breaks.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h7",
+          "text": "Verified today: 'devex pr' has no push subcommand and no top-level push exists; re-entering triage requires a manual 'pr await' / 'pr read --wait'.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c5",
+      "kind": "why_it_matters",
+      "text": "Continuous PR management: every push, like every new PR, deterministically lands the agent back in the triage loop instead of leaving fresh CI/Sonar/review feedback unwatched.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h8",
+          "text": "Determinism: identical branch/PR state always routes to the same path (managed vs plain); no backend or branch auto-detection.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c6",
+      "kind": "success_signal",
+      "text": "After a push on a PR branch, the agent ends up holding the post-push review delta (CI + Sonar + threads) without issuing a second command.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h9",
+          "text": "Observable: one 'devex push' on a PR branch ends with the post-push CI/Sonar/threads delta on stdout, exit code reflecting the quality gate.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c7",
+      "kind": "boundary",
+      "text": "Not a general git porcelain: the push path is the minimum to land commits on the remote; devex does not grow into a git front-end (no rebase/merge/stash/branch management).",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h10",
+          "text": "Scope cap: the only git mutation devex performs is 'git push' of the current branch \u2014 no rebase/merge/stash/branch/commit.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c8",
+      "kind": "non_goal",
+      "text": "When the branch has no open PR, devex does NOT open one \u2014 that stays an explicit 'pr open'. The push case with no PR is out of the PR-management path.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c9",
+      "kind": "requirement",
+      "text": "The command must detect whether the current branch has an open PR (via gh) BEFORE deciding whether to enter the wait \u2014 the PR-management path is gated on PR existence, never auto-detected away from the user's branch.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h1",
+          "text": "Open-PR detection is a single 'gh pr view --json' style call on the current branch; no PR => exit 0 with a plain-push (or notice) path, never an error.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c10",
+      "kind": "requirement",
+      "text": "The default post-push wait is ~180s (3 minutes), matching 'pr open --delayed-read' (pr read --wait 180), not pr await's 1800s default \u2014 overridable via a flag.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h2",
+          "text": "The 180s default is exposed as an overridable flag (e.g. --max-wait) and documented as matching the new-PR delayed read.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c11",
+      "kind": "decision",
+      "text": "The command lives under the existing 'pr' namespace as 'devex pr push' (continuous PR management is a pr concern), rather than a top-level 'devex push'.",
+      "origin": "llm",
+      "status": "rejected",
+      "honesty_conditions": [],
+      "hard_questions": [
+        {
+          "id": "q1",
+          "text": "risk: Naming as 'pr push' is odd when no PR exists (you'd 'pr push' a branch that has no PR) \u2014 top-level 'devex push' may read better for the plain-push case.",
+          "resolved": true,
+          "blocking": false
+        }
+      ],
+      "links": []
+    },
+    {
+      "id": "c12",
+      "kind": "assumption",
+      "text": "It reuses the existing readiness machinery \u2014 pr await --detach/--check and/or pr read --wait \u2014 rather than introducing a second poller implementation.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c13",
+      "kind": "requirement",
+      "text": "Performing 'git push' of the current branch is a NEW class of side effect for devex (push-only; no commit); it requires an explicit carve-out added to design-invariant #4, alongside the existing pr-namespace network/sleep exceptions.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h3",
+          "text": "design-invariant #4 in CLAUDE.md is amended to name 'git push' as an allowed side effect of 'devex push', with the same explicitness as the existing gh/sleep carve-out \u2014 otherwise the feature violates a non-negotiable invariant.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c14",
+      "kind": "decision",
+      "text": "Top-level 'devex push' (not 'devex pr push'): reads naturally for the no-PR 'just push' case and conditionally enters PR management when an open PR exists.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c15",
+      "kind": "decision",
+      "text": "Push-only: pushes already-committed work; devex does NOT stage or commit. Commit-push is out of scope for v0.1.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c16",
+      "kind": "decision",
+      "text": "After-push wait is BLOCKING ~180s (mirrors 'pr open --delayed-read' = 'pr read --wait 180'), not detached; --max-wait overrides. Resolves q2.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    }
+  ],
+  "open_vagueness": [
+    {
+      "id": "v1",
+      "text": "RESOLVED (push-only, c15): commit-push (stage+commit) is out of scope for v0.1; 'devex push' strictly pushes already-committed work.",
+      "kind": "out_of_scope",
+      "claim_id": "c15"
+    }
+  ]
+}
