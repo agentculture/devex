@@ -218,3 +218,7 @@ __marimo__/
 .devague/questions/
 
 .devague/reviews/
+
+# devague session pointers (transient)
+.devague/current
+.devague/current_plan
