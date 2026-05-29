@@ -136,18 +136,53 @@ def test_push_runtime_error_maps_to_exit_1(tmp_path, monkeypatch, capsys):
     assert "git push failed: rejected" in captured.err
 
 
-def test_push_no_agent_uses_culture_yaml_fallback(tmp_path, monkeypatch):
-    """`devex push` without --agent is accepted (resolves via culture.yaml fallback)."""
+def test_push_git_failure_shows_pushable_state_hint(tmp_path, monkeypatch, capsys):
+    """A git-push RuntimeError gets the git-specific 'pushable state' rerun hint."""
     from unittest.mock import patch
 
     monkeypatch.chdir(tmp_path)
-    # Without --agent the parser passes agent=None; push_script.run handles
-    # resolution internally via resolve_backend.  We mock run so the test
-    # never touches the real git layer.
+    with patch("devex.cli.push_script.run", side_effect=RuntimeError("git push failed: rejected")):
+        code = cli.main(["push", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "pushable state" in captured.err
+    # Must NOT misdirect to the gh/network hint for a git-push failure.
+    assert "network is reachable" not in captured.err
+
+
+def test_push_gh_failure_shows_gh_hint_not_git_hint(tmp_path, monkeypatch, capsys):
+    """A `gh failed:` RuntimeError (PR detection after a good push) gets the gh hint,
+    not the git-push 'pushable state' hint that would re-trigger a second push."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    with patch("devex.cli.push_script.run", side_effect=RuntimeError("gh failed: HTTP 503")):
+        code = cli.main(["push", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "gh failed: HTTP 503" in captured.err
+    assert "network is reachable" in captured.err
+    assert "pushable state" not in captured.err
+
+
+def test_push_requires_agent(tmp_path, monkeypatch, capsys):
+    """`devex push` without --agent is a usage error (invariant #3: backend-
+    sensitive commands require an explicit --agent; no culture.yaml inference).
+
+    Matches every other top-level backend-sensitive command (overview/learn/
+    gamify/hook read) rather than the pr namespace's required=False pattern.
+    """
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    # push_script.run is patched so a regression that *did* dispatch would still
+    # not touch the real git layer — but argparse must reject the call first.
     with patch("devex.cli.push_script.run", return_value=("", 0, "")) as mock_run:
-        code = cli.main(["push"])
-    assert code == 0
-    assert mock_run.call_args.kwargs["agent"] is None
+        with pytest.raises(SystemExit) as excinfo:
+            cli.main(["push"])
+    assert excinfo.value.code == 2
+    assert "--agent" in capsys.readouterr().err
+    mock_run.assert_not_called()
 
 
 def test_push_runs_non_interactively(tmp_path, monkeypatch):

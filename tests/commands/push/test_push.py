@@ -264,3 +264,58 @@ def test_default_project_dir_is_cwd(monkeypatch, tmp_path):
     push.run("claude-code")
 
     assert captured["project_dir"] == tmp_path
+
+
+# --- _load_hints crash-resistance (Qodo #3) ---------------------------------
+
+
+class _FakePkg:
+    """Stand-in for ``files(pkg)`` whose ``joinpath`` returns a fake resource."""
+
+    def __init__(self, resource):
+        self._resource = resource
+
+    def joinpath(self, _name):
+        return self._resource
+
+
+class _FakeResource:
+    """A present backend yaml that either raises on read or yields given text."""
+
+    def __init__(self, *, raw=None, exc=None):
+        self._raw = raw
+        self._exc = exc
+
+    def is_file(self):
+        return True
+
+    def read_text(self, encoding="utf-8"):  # noqa: ARG002 - mirror Traversable
+        if self._exc is not None:
+            raise self._exc
+        return self._raw
+
+
+def _backend():
+    return next(iter(push.Backend))
+
+
+def test_load_hints_survives_non_utf8_file(monkeypatch):
+    """A non-UTF8/corrupted backend yaml degrades to {} instead of crashing."""
+    bad = UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+    monkeypatch.setattr(push, "files", lambda _pkg: _FakePkg(_FakeResource(exc=bad)))
+    assert push._load_hints(_backend()) == {}
+
+
+def test_load_hints_survives_non_dict_yaml(monkeypatch):
+    """A valid-but-non-mapping yaml (e.g. a top-level list) degrades to {}."""
+    monkeypatch.setattr(push, "files", lambda _pkg: _FakePkg(_FakeResource(raw="- a\n- b\n")))
+    assert push._load_hints(_backend()) == {}
+
+
+def test_hint_falls_back_to_generic_when_loader_yields_nothing(monkeypatch):
+    """Even with an unreadable backend yaml, `_hint` still returns the generic
+    non-empty notice — `devex push` stays functional, never crashes/blank."""
+    bad = UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+    monkeypatch.setattr(push, "files", lambda _pkg: _FakePkg(_FakeResource(exc=bad)))
+    notice = push._hint(_backend(), "no_pr_notice")
+    assert notice and "pr open" in notice

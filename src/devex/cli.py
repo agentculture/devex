@@ -143,9 +143,16 @@ def _cmd_push(args: argparse.Namespace) -> int:
     except RuntimeError as exc:
         prog = prog_name()
         print(str(exc), file=sys.stderr)
-        print(
-            f"{prog}: rerun '{prog} push' once the branch is in a pushable state", file=sys.stderr
-        )
+        if str(exc).startswith("gh failed:"):
+            # PR detection (`gh pr view`) failed *after* a successful push —
+            # a gh/network problem, not a git-push one. Don't tell the agent to
+            # rerun `push` (that would push again); point at the gh hint.
+            print(_gh_rerun_hint(), file=sys.stderr)
+        else:
+            print(
+                f"{prog}: rerun '{prog} push' once the branch is in a pushable state",
+                file=sys.stderr,
+            )
         return 1
     _emit(stdout, stderr)
     return exit_code
@@ -375,11 +382,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "returns early (down to waited=0s) once satisfied (default 180)."
         ),
     )
-    _add_agent_option(
-        p_push,
-        required=False,
-        help_text="Backend (claude-code|codex|copilot|acp); falls back to culture.yaml.",
-    )
+    _add_agent_option(p_push, required=True, help_text=_AGENT_HELP)
     p_push.set_defaults(func=_cmd_push)
 
     _register_hook(sub)

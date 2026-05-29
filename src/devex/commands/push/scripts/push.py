@@ -72,8 +72,15 @@ def _load_hints(backend: Backend) -> dict[str, str]:
         return {}
     try:
         raw = resource.read_text(encoding="utf-8")
-        data = yaml.safe_load(raw) or {}
-    except (OSError, yaml.YAMLError):
+        data = yaml.safe_load(raw)
+    except (OSError, UnicodeError, yaml.YAMLError):
+        # UnicodeError covers a non-UTF8 / corrupted file (UnicodeDecodeError);
+        # OSError an unreadable one; YAMLError a malformed one. All degrade to
+        # the generic fallback rather than crashing `devex push`.
+        return {}
+    if not isinstance(data, dict):
+        # A valid YAML scalar/list (e.g. a top-level list) parses fine but has
+        # no `.get` — guard so it falls back instead of raising AttributeError.
         return {}
     hints = data.get("hints", {})
     return dict(hints) if isinstance(hints, dict) else {}
