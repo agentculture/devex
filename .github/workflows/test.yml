@@ -47,7 +47,10 @@ jobs:
       - run: uv venv
       - run: uv pip install -e ".[dev]"
       - run: uv run pytest --cov --cov-report=xml
-      - uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995  # v8.1.0
+      # Pinned to v5 (classic scanner CLI). v8's scanner engine 404s on
+      # `api.sonarcloud.io/analysis/analyses` against SonarQube Cloud; v5 posts
+      # to sonarcloud.io directly and is the stable pin for Cloud.
+      - uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703  # v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
