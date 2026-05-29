@@ -261,7 +261,10 @@ def pr_review_threads(pr: int) -> list[dict[str, Any]]:
     """Return all review threads on a PR with their resolution state.
 
     Each item: ``{"id": <node_id>, "isResolved": <bool>}``.  Empty list
-    when the PR has no review threads.
+    when the PR has no review threads.  A non-JSON GraphQL body (e.g. an HTML
+    error page returned with exit code 0) degrades to ``[]`` — same
+    enrichment-or-skip contract as :func:`sonar_new_issues` — so a transient
+    blip never crashes ``pr read`` / ``pr await`` via the thread tally.
     """
     owner, repo = _repo_slug().split("/", 1)
     out = _run_gh(
@@ -278,7 +281,10 @@ def pr_review_threads(pr: int) -> list[dict[str, Any]]:
             f"query={_REVIEW_THREADS_QUERY}",
         ]
     )
-    data = json.loads(out)
+    try:
+        data = json.loads(out)
+    except json.JSONDecodeError:
+        return []
     nodes = (
         data.get("data", {})
         .get("repository", {})

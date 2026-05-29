@@ -206,6 +206,48 @@ def test_pr_resolve_thread_calls_graphql(monkeypatch):
     assert "resolveReviewThread" in joined
 
 
+def test_pr_review_threads_parses_nodes(monkeypatch):
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "nodes": [
+                            {"id": "T1", "isResolved": True},
+                            {"id": "T2", "isResolved": False},
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
+    monkeypatch.setattr(
+        subprocess, "run", lambda *a, **k: _FakeCompleted(stdout=json.dumps(payload), returncode=0)
+    )
+    assert github.pr_review_threads(42) == [
+        {"id": "T1", "isResolved": True},
+        {"id": "T2", "isResolved": False},
+    ]
+
+
+def test_pr_review_threads_empty_on_non_json(monkeypatch):
+    """A non-JSON body with exit code 0 must not crash callers (thread tally).
+
+    Regression for PR #63 review: pr_review_threads json.loads()'d
+    unconditionally, so a transient HTML error page raised JSONDecodeError
+    through thread_tally (which only caught RuntimeError) and crashed
+    pr read / pr await.
+    """
+    monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
+    )
+    assert github.pr_review_threads(42) == []
+
+
 def test_sonar_quality_gate_returns_dict(monkeypatch):
     monkeypatch.setattr(
         subprocess,

@@ -11,9 +11,16 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# Matches a Cloudflare Pages preview URL.  The trailing char-class consumes any
-# path but stops at whitespace or the closing ``)`` / ``]`` of a markdown link.
-_PAGES_RE = re.compile(r"https://[a-z0-9][a-z0-9.-]*\.pages\.dev[^\s)\]]*", re.IGNORECASE)
+# Matches a Cloudflare Pages preview URL.  ``.pages.dev`` must terminate the host
+# authority — the negative lookahead rejects an authority that continues with
+# another label or userinfo (e.g. ``x.pages.dev.evil.com`` / ``x.pages.dev@evil``),
+# which would otherwise let a crafted comment inject a misleading link.  Only a
+# ``/?#``-led path/query/fragment may follow; the path stops at whitespace or the
+# closing ``)`` / ``]`` of a markdown link.
+_PAGES_RE = re.compile(
+    r"https://[a-z0-9][a-z0-9.-]*\.pages\.dev(?![a-z0-9.\-@])(?:[/?#][^\s)\]]*)?",
+    re.IGNORECASE,
+)
 
 
 def preview_url(comments: list[dict[str, Any]]) -> str | None:
