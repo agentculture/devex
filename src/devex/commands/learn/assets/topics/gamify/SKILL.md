@@ -33,3 +33,5 @@ The hook data is inert without something to surface it. Build the levelup skill 
 ## After both parts
 
 Use your runtime normally for a few sessions. Then invoke `/levelup` — it will read the tracking data via `devex hook read` and advise the user.
+
+{{ footer }}

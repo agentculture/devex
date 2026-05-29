@@ -18,6 +18,10 @@ from typing import Literal
 import yaml
 
 from devex import __version__
+from devex.commands.doctor.scripts._footer import render_footer
+from devex.commands.doctor.scripts.next_step import doctor_next_step
+from devex.core.backend import Backend
+from devex.core.footer import render_neutral_footer
 from devex.core.paths import (
     GITIGNORE_CONTENT,
     config_path,
@@ -336,10 +340,31 @@ def _summarize(categories: list[Category]) -> dict[str, int]:
     return summary
 
 
-def run(role: str | None = None) -> tuple[str, int, str]:
+def _footer_for(fail_count: int, backend: Backend | None) -> str:
+    """Render the trailing 'Next step:' footer for a completed doctor run.
+
+    With *backend* the per-backend doctor hints are used; without it the
+    shared neutral footer is emitted.  The footer reflects state (failures →
+    fix-and-rerun, clean → proceed) but never changes the exit code.  Returns
+    the footer prefixed with a blank line so it never glues onto the report.
+    """
+    rule_key, ctx = doctor_next_step(fail_count)
+    if backend is not None:
+        footer = render_footer(rule_key, backend, ctx)
+    else:
+        footer = render_neutral_footer(rule_key, ctx)
+    return f"\n{footer}\n"
+
+
+def run(role: str | None = None, backend: Backend | None = None) -> tuple[str, int, str]:
     """Return ``(stdout, exit_code, stderr)``.
 
     Read-only.  Never initializes ``.devex/``.
+
+    *backend* is optional: when supplied the trailing 'Next step:' footer is
+    rendered from that backend's doctor hints, otherwise a neutral footer is
+    emitted.  The footer reflects the pass/fail state but never alters the
+    exit code (failures still exit 1, clean still exits 0).
     """
     if role is not None and _ROLE_RE.match(role) is None:
         return ("", 2, error_prefix(f"invalid role slug '{role}'"))
@@ -386,6 +411,7 @@ def run(role: str | None = None) -> tuple[str, int, str]:
             "summary": summary,
         },
     )
+    out += _footer_for(summary["fail"], backend)
 
     if summary["fail"] > 0:
         stderr = error_prefix(f"{summary['fail']} health check(s) failed")

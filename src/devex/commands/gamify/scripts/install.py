@@ -4,11 +4,20 @@ from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
 
+from devex.commands.gamify.scripts.next_step import (
+    gamify_install_next_step,
+    gamify_nothing_to_remove_next_step,
+    gamify_uninstall_next_step,
+    gamify_unsupported_next_step,
+)
 from devex.core.backend import Backend
 from devex.core.config import load as load_config
 from devex.core.config import save as save_config
+from devex.core.footer import render_footer
 from devex.core.paths import ensure_init
 from devex.core.prog import error_prefix, prog_name
+
+_BACKENDS_PKG = "devex.commands.gamify.assets.backends"
 
 
 def _fragments_file() -> Traversable:
@@ -137,15 +146,15 @@ def install(backend: Backend) -> tuple[str, int, str]:
             f"- Ensured {len(written_ids)} hook fragment(s) already present "
             f"in `{rel}` (no changes)."
         )
+    rule_key, footer_ctx = gamify_install_next_step(backend)
+    footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
     lines = [
         f"# Gamify installed — {backend.value}",
         "",
         status_line,
         "- Fragment IDs: " + ", ".join(f"`{i}`" for i in written_ids),
         "",
-        f"Next: run `{prog_name()} learn gamify --agent {backend.value}`"
-        " to set up the levelup skill.",
-        "",
+        str(footer),
     ]
     return ("\n".join(lines), 0, "")
 
@@ -161,7 +170,10 @@ def uninstall(backend: Backend) -> tuple[str, int, str]:
     installed = cfg.installed.get("gamify", {})
     ids_to_remove = set(installed.get("hook_fragment_ids", []))
     if not ids_to_remove:
-        return (f"# Gamify uninstalled — nothing to remove on {backend.value}.\n", 0, "")
+        rule_key, footer_ctx = gamify_nothing_to_remove_next_step(backend)
+        footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
+        body = f"# Gamify uninstalled — nothing to remove on {backend.value}.\n\n{footer}\n"
+        return (body, 0, "")
 
     rel = hooks_file.relative_to(project_dir)
     # If the user already removed the hooks file, just drop the config record.
@@ -169,11 +181,13 @@ def uninstall(backend: Backend) -> tuple[str, int, str]:
     if not hooks_file.exists():
         cfg.installed.pop("gamify", None)
         save_config(cfg)
-        return (
-            f"# Gamify uninstalled — `{rel}` was already gone; " "cleared config record.\n",
-            0,
-            "",
+        rule_key, footer_ctx = gamify_uninstall_next_step(backend)
+        footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
+        body = (
+            f"# Gamify uninstalled — `{rel}` was already gone; cleared config record.\n\n"
+            f"{footer}\n"
         )
+        return (body, 0, "")
 
     try:
         hooks = _load_hooks_file(hooks_file)
@@ -187,17 +201,22 @@ def uninstall(backend: Backend) -> tuple[str, int, str]:
     cfg.installed.pop("gamify", None)
     save_config(cfg)
 
-    return (
-        f"# Gamify uninstalled — removed {removed_count} fragment(s) from `{rel}`.\n",
-        0,
-        "",
+    rule_key, footer_ctx = gamify_uninstall_next_step(backend)
+    footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
+    body = (
+        f"# Gamify uninstalled — removed {removed_count} fragment(s) from `{rel}`.\n\n"
+        f"{footer}\n"
     )
+    return (body, 0, "")
 
 
 def _unsupported_notice(backend: Backend) -> str:
+    rule_key, footer_ctx = gamify_unsupported_next_step(backend)
+    footer = render_footer(rule_key, backend, footer_ctx, _BACKENDS_PKG)
     return (
         f"## `gamify` is not supported on {backend.value}\n\n"
         f"Hooks are required to track usage events, and {backend.value} does not expose "
         f"a hook interface {prog_name()} can write to.\n\n"
-        "Want this supported? Open an issue: <https://github.com/agentculture/devex/issues>\n"
+        "Want this supported? Open an issue: <https://github.com/agentculture/devex/issues>\n\n"
+        f"{footer}\n"
     )

@@ -1,0 +1,4 @@
+hints:
+  explain_command: "Run `{{ prog }} {{ topic }} --agent codex` to use it, or `{{ prog }} learn {{ topic }} --agent codex` for a guided lesson."
+  explain_lesson: "Run `{{ prog }} learn {{ topic }} --agent codex` to work through this lesson interactively."
+  explain_concept: "Run `{{ prog }} explain devex` for the command map, then pick a command and run it with `--agent codex`."

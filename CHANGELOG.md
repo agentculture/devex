@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-05-29
+
+### Added
+
+- Cross-command `Next step:` footers: every non-silent command (`explain`, `learn`, `overview`, `doctor`, `gamify`, `hook read`, plus the `pr` namespace) now ends with a deterministic, per-backend agent-facing micro-prompt telling the running agent how to continue.
+- Optional `--agent` on `explain` and `doctor`: backend-specific footer when supplied, neutral footer when omitted (non-breaking; flagless calls keep working).
+- `core/footer.py` — shared, command-agnostic footer renderer (`render_footer` + `render_neutral_footer`) plus a neutral hints source `core/assets/backends/neutral.yaml`.
+- Per-command next-step decision functions and `hints:` blocks under `commands/<cmd>/assets/backends/<backend>.yaml`.
+- Footer-guarantee + hint-coverage guard tests (every command ends with one footer; every reachable rule_key has a hint; deterministic, no new side effects).
+
+### Changed
+
+- Footer-rendering machinery promoted from `commands/pr/` into `core/` (pure relocation; pr footers byte-identical).
+- `gamify` now emits the structured footer for install/uninstall, replacing the prior ad-hoc `Next:` line.
+
+### Fixed
+
+- `gamify` unsupported-backend notice (codex/copilot/acp) now ends with a `Next step:` footer, closing a gap in the cross-command guarantee.
+
 ## [0.26.1] - 2026-05-29
 
 ### Added

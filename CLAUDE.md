@@ -38,8 +38,12 @@ cli.py ──► commands/<name>/scripts/<name>.py ──► core/render.py
 
 - `cli.py` (Typer) routes `devex <command> [args] --agent X`. No business logic.
 - Each `commands/<name>/` is a **skill-folder**: `SKILL.md` + `scripts/` + `assets/` + `references/`. The `SKILL.md` doubles as the content emitted by `devex explain <command>`.
-- `core/` is shared plumbing — backend enum, `.devex/` paths, Jinja renderer (`StrictUndefined`), TOML config, SKILL.md frontmatter parser, capability matrix loader, hook JSON I/O. Command- and content-agnostic.
+- `core/` is shared plumbing — backend enum, `.devex/` paths, Jinja renderer (`StrictUndefined`), TOML config, SKILL.md frontmatter parser, capability matrix loader, hook JSON I/O, footer renderer (`core/footer.py`). Command- and content-agnostic.
 - A backend lives in three places: `core/backend.Backend` (enum entry), `backends/<name>/probe.py` (optional Python probe), and one YAML per relevant command under `commands/*/assets/backends/<name>.yaml`. Adding a backend touches only those locations.
+
+## Cross-command "Next step:" footers (v0.27.0+)
+
+Every non-silent command ends with a deterministic, per-backend **"Next step:"** footer — an agent-facing micro-prompt telling the running agent how to continue. The renderer is shared in `core/footer.py`: `render_footer(rule_key, backend, context, backends_pkg)` (backend path) and `render_neutral_footer(rule_key, context)` (no-backend path; hints from `core/assets/backends/neutral.yaml`); the block template is `core/assets/footer.md.j2` (`---\n**Next step:** <hint>`). Each command supplies a decision function (`commands/<cmd>/scripts/next_step.py`, returns `(rule_key, context)`) and per-backend `hints:` under `commands/<cmd>/assets/backends/<backend>.yaml`. `explain` and `doctor` take an **optional** `--agent` (backend footer when given, neutral when omitted; flagless calls unchanged). `hook write` stays **silent** (no footer) — the deliberate exception. Two guard tests enforce the guarantee: `tests/test_footer_guarantee.py` (every command ends with exactly one footer; deterministic; no new side effects) and `tests/test_footer_hints.py` (every reachable `(command, backend, rule_key)` has a hint; hints are agent-imperative).
 
 ## `devex pr` namespace (v0.17.0+)
 

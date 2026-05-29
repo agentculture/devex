@@ -1,0 +1,307 @@
+{
+  "slug": "every-devex-command-now-closes-with-a-deterministi",
+  "title": "Every devex command now closes with a deterministic, per-backend Next step micro-prompt telling the running agent exactly how to continue \u2014 the pr namespace footer convention becomes a cross-command guarantee.",
+  "frame_slug": "every-devex-command-now-closes-with-a-deterministi",
+  "schema_version": 1,
+  "status": "exported",
+  "created": "2026-05-29T15:12:32Z",
+  "updated": "2026-05-29T15:18:39Z",
+  "targets": [
+    {
+      "id": "c1",
+      "kind": "announcement",
+      "text": "Every devex command now closes with a deterministic, per-backend Next step micro-prompt telling the running agent exactly how to continue \u2014 the pr namespace footer convention becomes a cross-command guarantee."
+    },
+    {
+      "id": "h4",
+      "kind": "honesty",
+      "text": "Every command path that reaches stdout terminates in exactly one Next step footer block \u2014 the guarantee is total, not best-effort \u2014 verified by a test that runs every non-silent command and asserts a trailing footer."
+    },
+    {
+      "id": "c2",
+      "kind": "audience",
+      "text": "Autonomous coding agents (claude-code, codex, copilot, acp backends) that invoke devex commands non-interactively and must pick their next move without an LLM in the loop."
+    },
+    {
+      "id": "h6",
+      "kind": "honesty",
+      "text": "Every footer hint is phrased as an actionable instruction to the running agent (an imperative naming a concrete next command/move), never human-facing prose \u2014 asserted by a test/lint on hint form."
+    },
+    {
+      "id": "c3",
+      "kind": "after_state",
+      "text": "Every non-silent devex command (explain, learn, overview, doctor, gamify, hook read, plus the existing pr namespace) ends its markdown with a Next step footer naming a concrete next move, so the agent never has to infer what to run next."
+    },
+    {
+      "id": "h3",
+      "kind": "honesty",
+      "text": "For each non-silent command there is a deterministic mapping from its observable end-state to exactly one rule_key, so the footer is reproducible across identical inputs."
+    },
+    {
+      "id": "c4",
+      "kind": "before_state",
+      "text": "Today only the pr namespace ends with a Next step footer. explain, learn, overview, doctor and hook read end at EOF; gamify install has a one-off ad-hoc Next line. After every other command the agent must guess the next move."
+    },
+    {
+      "id": "h7",
+      "kind": "honesty",
+      "text": "A snapshot test of current non-pr command output confirms none emits a Next step footer today, so the gap this feature closes is demonstrated, not assumed."
+    },
+    {
+      "id": "c5",
+      "kind": "why_it_matters",
+      "text": "devex exists to give autonomous agents deterministic guidance. A command that ends without a next-move prompt leaves a decision gap the agent fills by guessing \u2014 non-deterministic behaviour in a tool whose whole premise is determinism. A closing micro-prompt makes the command surface self-chaining."
+    },
+    {
+      "id": "h8",
+      "kind": "honesty",
+      "text": "The footer is fully determined by command inputs plus project state with zero LLM/network/random input \u2014 identical inputs always yield an identical footer, asserted by a reproducibility test."
+    },
+    {
+      "id": "c6",
+      "kind": "boundary",
+      "text": "Out of scope: rewriting command body content; LLM-generated footers; adding a footer to deliberately-silent commands such as hook write which emits empty stdout; and auto-executing the suggested command \u2014 the footer is a prompt, not an action, so no new side effects are introduced."
+    },
+    {
+      "id": "h9",
+      "kind": "honesty",
+      "text": "After the change hook write still emits empty stdout and no command gains a new network/file-write/sleep side effect from the footer \u2014 verified by the existing side-effect/invariant tests staying green."
+    },
+    {
+      "id": "c7",
+      "kind": "success_signal",
+      "text": "A test asserts every non-silent command stdout ends with the footer block, and that each backend YAML defines a hint for every rule key its command can emit, so there is no missing-hint KeyError at runtime."
+    },
+    {
+      "id": "h10",
+      "kind": "honesty",
+      "text": "Both guard tests (every-command-ends-with-a-footer; every reachable rule_key has a hint) exist, run in CI, and fail loudly when a command or rule_key is added without a hint."
+    },
+    {
+      "id": "c8",
+      "kind": "requirement",
+      "text": "The footer-rendering machinery now under commands/pr (the _footer renderer, the rule_key plus context decision pattern, and footer.md.j2) is promoted to core so every command shares one implementation."
+    },
+    {
+      "id": "h1",
+      "kind": "honesty",
+      "text": "After the machinery moves to core, the pr namespace footers are byte-identical and every existing pr footer test passes unchanged (pure relocation, no behaviour change)."
+    },
+    {
+      "id": "c9",
+      "kind": "requirement",
+      "text": "Each non-pr command gains a small next-step decision function returning rule_key plus context, and a hints block in its per-command assets/backends/backend.yaml, mirroring how the pr namespace is structured."
+    },
+    {
+      "id": "h2",
+      "kind": "honesty",
+      "text": "One enumerating test walks every (command, backend, reachable rule_key) triple and fails if any hint string is missing, proving coverage rather than assuming it."
+    },
+    {
+      "id": "c10",
+      "kind": "requirement",
+      "text": "Backend-agnostic commands that do not take --agent today (explain, doctor) must still end with a coherent Next step footer."
+    },
+    {
+      "id": "h5",
+      "kind": "honesty",
+      "text": "With --agent provided, explain/doctor render that backend's hint; with it omitted they render a neutral hint from a shared default; both paths are test-covered so the optional flag never yields a missing or empty footer."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "summary": "Promote the footer-rendering machinery from commands/pr into core (pure relocation, no behaviour change)",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "A new core module (core/footer.py) exposes render_footer plus hint-loading, and footer.md.j2 moves to a core assets location",
+        "All pr scripts import the footer renderer from core and pr footer output is byte-identical to before (snapshot diff empty)",
+        "The entire existing pr footer test suite passes unchanged"
+      ],
+      "deps": [],
+      "covers": [
+        "c8",
+        "h1"
+      ]
+    },
+    {
+      "id": "t2",
+      "summary": "Add neutral-default footer resolution to the core renderer for when no backend is supplied",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "When render_footer is called with no backend it resolves hints from a shared neutral source and returns a valid Next step block",
+        "Unit test: the neutral path yields a non-empty footer and the backend-specific path is unchanged"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c10",
+        "h5"
+      ]
+    },
+    {
+      "id": "t3",
+      "summary": "Add an optional --agent flag to explain and doctor and wire their Next step footers (backend hint when given, neutral when omitted)",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "devex explain TOPIC and devex doctor accept an optional --agent and existing flagless invocations keep working unchanged",
+        "With --agent the footer uses that backend per-command hints, without it the neutral footer is emitted, and both paths are covered by tests",
+        "Each of explain and doctor has a next-step decision function and a hints block (backend yamls plus neutral)"
+      ],
+      "deps": [
+        "t2"
+      ],
+      "covers": [
+        "c10",
+        "h5",
+        "c9"
+      ]
+    },
+    {
+      "id": "t4",
+      "summary": "Add a Next step footer to learn (menu and topic views) with a decision function and per-backend hints",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "learn menu and learn TOPIC both end with a Next step footer chosen by a decision function returning a rule_key plus context",
+        "commands/learn/assets/backends per-backend yaml defines a hint for every rule_key learn can emit, for all four backends",
+        "Unit tests cover the menu and topic footers for at least one backend"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c9",
+        "c3"
+      ]
+    },
+    {
+      "id": "t5",
+      "summary": "Add a Next step footer to overview with a decision function and per-backend hints",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "overview ends with a Next step footer chosen by a decision function returning a rule_key plus context",
+        "commands/overview/assets/backends per-backend yaml defines a hint for every rule_key overview can emit, for all four backends",
+        "A unit test asserts the overview footer for at least one backend"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c9",
+        "c3"
+      ]
+    },
+    {
+      "id": "t6",
+      "summary": "Replace gamify ad-hoc Next line with the structured Next step footer for install and uninstall",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "gamify install and uninstall end with the structured footer and the old ad-hoc Next line is removed",
+        "commands/gamify/assets/backends per-backend yaml defines a hint for every rule_key gamify can emit, for all four backends",
+        "Unit tests cover the install and uninstall footers for at least one backend"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c9",
+        "c3"
+      ]
+    },
+    {
+      "id": "t7",
+      "summary": "Add a Next step footer to hook read while keeping hook write silent",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "hook read ends with a Next step footer chosen by a decision function, and hook write still emits empty stdout with no footer",
+        "commands/hook/assets/backends per-backend yaml defines a hint for every rule_key hook read can emit, for all four backends",
+        "Unit tests assert the hook read footer and that hook write output stays empty"
+      ],
+      "deps": [
+        "t1"
+      ],
+      "covers": [
+        "c9",
+        "c3"
+      ]
+    },
+    {
+      "id": "t8",
+      "summary": "Add cross-command footer-guarantee tests: total coverage, determinism, no new side effects, and the pre-change gap",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "A parametrized test runs every non-silent command and asserts stdout ends with exactly one Next step footer block",
+        "A determinism test runs each command twice on identical project state and asserts byte-identical footers (no LLM, network, or randomness)",
+        "A test asserts hook write emits empty stdout and that no command performs network, file-write, or sleep to build its footer",
+        "A test demonstrates the pre-change gap: with the footer block absent each command body contains no Next step marker"
+      ],
+      "deps": [
+        "t3",
+        "t4",
+        "t5",
+        "t6",
+        "t7"
+      ],
+      "covers": [
+        "c1",
+        "c3",
+        "c4",
+        "c5",
+        "c6",
+        "h3",
+        "h4",
+        "h7",
+        "h8",
+        "h9"
+      ]
+    },
+    {
+      "id": "t9",
+      "summary": "Add hint-coverage and hint-form guard tests wired into the existing CI test job",
+      "origin": "llm",
+      "status": "confirmed",
+      "acceptance_criteria": [
+        "An enumerating test walks every command-backend-rule_key triple and fails if any hint string is missing",
+        "A hint-form test asserts each hint is an imperative addressed to the agent that names a concrete devex command or move, not human prose",
+        "Both guard tests run under the existing pytest CI job and fail loudly when a command or rule_key is added without a hint"
+      ],
+      "deps": [
+        "t3",
+        "t4",
+        "t5",
+        "t6",
+        "t7"
+      ],
+      "covers": [
+        "c2",
+        "c7",
+        "h2",
+        "h6",
+        "h10"
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "text": "Exact neutral-footer hint phrasing for explain and doctor is unspecified; builder picks concise agent-facing wording",
+      "kind": "unknown_nonblocking",
+      "task_id": "t3"
+    },
+    {
+      "id": "r2",
+      "text": "The hint-form check (imperative naming a command) is heuristic and may need tuning to avoid false positives",
+      "kind": "follow_up",
+      "task_id": "t9"
+    }
+  ]
+}

@@ -213,3 +213,12 @@ __marimo__/
 
 # Worktrees
 .worktrees/
+
+# devague working state (not committed by default)
+.devague/questions/
+
+.devague/reviews/
+
+# devague session pointers (transient)
+.devague/current
+.devague/current_plan

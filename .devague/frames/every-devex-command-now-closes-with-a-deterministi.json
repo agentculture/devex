@@ -1,0 +1,208 @@
+{
+  "slug": "every-devex-command-now-closes-with-a-deterministi",
+  "title": "Every devex command now closes with a deterministic, per-backend Next step micro-prompt telling the running agent exactly how to continue \u2014 the pr namespace footer convention becomes a cross-command guarantee.",
+  "schema_version": 1,
+  "status": "exported",
+  "created": "2026-05-29T14:19:33Z",
+  "updated": "2026-05-29T15:05:05Z",
+  "claims": [
+    {
+      "id": "c1",
+      "kind": "announcement",
+      "text": "Every devex command now closes with a deterministic, per-backend Next step micro-prompt telling the running agent exactly how to continue \u2014 the pr namespace footer convention becomes a cross-command guarantee.",
+      "origin": "user",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h4",
+          "text": "Every command path that reaches stdout terminates in exactly one Next step footer block \u2014 the guarantee is total, not best-effort \u2014 verified by a test that runs every non-silent command and asserts a trailing footer.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c2",
+      "kind": "audience",
+      "text": "Autonomous coding agents (claude-code, codex, copilot, acp backends) that invoke devex commands non-interactively and must pick their next move without an LLM in the loop.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h6",
+          "text": "Every footer hint is phrased as an actionable instruction to the running agent (an imperative naming a concrete next command/move), never human-facing prose \u2014 asserted by a test/lint on hint form.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c3",
+      "kind": "after_state",
+      "text": "Every non-silent devex command (explain, learn, overview, doctor, gamify, hook read, plus the existing pr namespace) ends its markdown with a Next step footer naming a concrete next move, so the agent never has to infer what to run next.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h3",
+          "text": "For each non-silent command there is a deterministic mapping from its observable end-state to exactly one rule_key, so the footer is reproducible across identical inputs.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c4",
+      "kind": "before_state",
+      "text": "Today only the pr namespace ends with a Next step footer. explain, learn, overview, doctor and hook read end at EOF; gamify install has a one-off ad-hoc Next line. After every other command the agent must guess the next move.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h7",
+          "text": "A snapshot test of current non-pr command output confirms none emits a Next step footer today, so the gap this feature closes is demonstrated, not assumed.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c5",
+      "kind": "why_it_matters",
+      "text": "devex exists to give autonomous agents deterministic guidance. A command that ends without a next-move prompt leaves a decision gap the agent fills by guessing \u2014 non-deterministic behaviour in a tool whose whole premise is determinism. A closing micro-prompt makes the command surface self-chaining.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h8",
+          "text": "The footer is fully determined by command inputs plus project state with zero LLM/network/random input \u2014 identical inputs always yield an identical footer, asserted by a reproducibility test.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c6",
+      "kind": "boundary",
+      "text": "Out of scope: rewriting command body content; LLM-generated footers; adding a footer to deliberately-silent commands such as hook write which emits empty stdout; and auto-executing the suggested command \u2014 the footer is a prompt, not an action, so no new side effects are introduced.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h9",
+          "text": "After the change hook write still emits empty stdout and no command gains a new network/file-write/sleep side effect from the footer \u2014 verified by the existing side-effect/invariant tests staying green.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c7",
+      "kind": "success_signal",
+      "text": "A test asserts every non-silent command stdout ends with the footer block, and that each backend YAML defines a hint for every rule key its command can emit, so there is no missing-hint KeyError at runtime.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h10",
+          "text": "Both guard tests (every-command-ends-with-a-footer; every reachable rule_key has a hint) exist, run in CI, and fail loudly when a command or rule_key is added without a hint.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c8",
+      "kind": "requirement",
+      "text": "The footer-rendering machinery now under commands/pr (the _footer renderer, the rule_key plus context decision pattern, and footer.md.j2) is promoted to core so every command shares one implementation.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h1",
+          "text": "After the machinery moves to core, the pr namespace footers are byte-identical and every existing pr footer test passes unchanged (pure relocation, no behaviour change).",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c9",
+      "kind": "requirement",
+      "text": "Each non-pr command gains a small next-step decision function returning rule_key plus context, and a hints block in its per-command assets/backends/backend.yaml, mirroring how the pr namespace is structured.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h2",
+          "text": "One enumerating test walks every (command, backend, reachable rule_key) triple and fails if any hint string is missing, proving coverage rather than assuming it.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c10",
+      "kind": "requirement",
+      "text": "Backend-agnostic commands that do not take --agent today (explain, doctor) must still end with a coherent Next step footer.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [
+        {
+          "id": "h5",
+          "text": "With --agent provided, explain/doctor render that backend's hint; with it omitted they render a neutral hint from a shared default; both paths are test-covered so the optional flag never yields a missing or empty footer.",
+          "status": "confirmed"
+        }
+      ],
+      "hard_questions": [
+        {
+          "id": "q1",
+          "text": "How do explain and doctor (no --agent flag today) emit a per-backend Next step footer? (a) add optional --agent, neutral footer when omitted; (b) stay agnostic, emit one neutral footer with no per-backend phrasing; (c) make --agent required on them too, breaking their agnostic contract.",
+          "resolved": false,
+          "blocking": false
+        }
+      ],
+      "links": []
+    },
+    {
+      "id": "c11",
+      "kind": "decision",
+      "text": "Reuse the existing mechanism unchanged \u2014 rule_key plus context resolved against a per-backend hints YAML and rendered through footer.md.j2 as a Next step block under a horizontal rule \u2014 rather than inventing a new footer format.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c12",
+      "kind": "non_goal",
+      "text": "This is not a generalized workflow or command-graph engine; the footer suggests a single sensible next move, it does not model, validate or enforce a sequence of commands.",
+      "origin": "llm",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    },
+    {
+      "id": "c13",
+      "kind": "decision",
+      "text": "explain and doctor gain an OPTIONAL --agent flag: when provided the footer uses that backend's hints YAML, when omitted a backend-neutral footer is emitted from a shared default. Existing flagless calls keep working unchanged (non-breaking). [resolves q1, user choice]",
+      "origin": "user",
+      "status": "confirmed",
+      "honesty_conditions": [],
+      "hard_questions": [],
+      "links": []
+    }
+  ],
+  "open_vagueness": []
+}

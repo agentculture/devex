@@ -1,0 +1,3 @@
+hints:
+  learn_menu: "Pick a lesson above and run `{{ prog }} learn <topic> --agent {{ backend }}`."
+  learn_topic: "Apply this lesson, or run `{{ prog }} learn --agent {{ backend }}` to see other lessons."

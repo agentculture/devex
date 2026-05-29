@@ -5,3 +5,5 @@ sections:
   - mcp
   - settings
 probe: acp
+hints:
+  overview_done: "Pick a skill from the table and run `{{ prog }} explain <skill>`, or `{{ prog }} learn <topic> --agent acp` to go deeper, then start your task."
