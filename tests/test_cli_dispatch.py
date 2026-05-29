@@ -82,3 +82,82 @@ def test_error_prefix_follows_invoked_command_name(tmp_path, monkeypatch, capsys
     captured = capsys.readouterr()
     assert code == 2
     assert captured.err.startswith("devex: error: ")
+
+
+# ---------------------------------------------------------------------------
+# push subcommand dispatch tests
+# ---------------------------------------------------------------------------
+
+
+def test_push_dispatches_to_push_script(tmp_path, monkeypatch):
+    """`devex push --agent claude-code` calls push_script.run with correct args."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    with patch("devex.cli.push_script.run", return_value=("out\n", 0, "")) as mock_run:
+        code = cli.main(["push", "--agent", "claude-code"])
+    assert code == 0
+    mock_run.assert_called_once()
+    call_kwargs = mock_run.call_args
+    assert call_kwargs.kwargs["agent"] == "claude-code"
+    assert call_kwargs.kwargs["max_wait"] == 180
+    assert call_kwargs.kwargs["project_dir"] == tmp_path
+
+
+def test_push_default_max_wait_is_180(tmp_path, monkeypatch):
+    """`--max-wait` defaults to 180 when not specified."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    with patch("devex.cli.push_script.run", return_value=("", 0, "")) as mock_run:
+        cli.main(["push", "--agent", "claude-code"])
+    assert mock_run.call_args.kwargs["max_wait"] == 180
+
+
+def test_push_max_wait_override_is_threaded(tmp_path, monkeypatch):
+    """`--max-wait 60` is threaded through to push_script.run."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    with patch("devex.cli.push_script.run", return_value=("", 0, "")) as mock_run:
+        cli.main(["push", "--agent", "claude-code", "--max-wait", "60"])
+    assert mock_run.call_args.kwargs["max_wait"] == 60
+
+
+def test_push_runtime_error_maps_to_exit_1(tmp_path, monkeypatch, capsys):
+    """`push_script.run` raising RuntimeError → exit 1, message on stderr."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    with patch("devex.cli.push_script.run", side_effect=RuntimeError("git push failed: rejected")):
+        code = cli.main(["push", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "git push failed: rejected" in captured.err
+
+
+def test_push_no_agent_uses_culture_yaml_fallback(tmp_path, monkeypatch):
+    """`devex push` without --agent is accepted (resolves via culture.yaml fallback)."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    # Without --agent the parser passes agent=None; push_script.run handles
+    # resolution internally via resolve_backend.  We mock run so the test
+    # never touches the real git layer.
+    with patch("devex.cli.push_script.run", return_value=("", 0, "")) as mock_run:
+        code = cli.main(["push"])
+    assert code == 0
+    assert mock_run.call_args.kwargs["agent"] is None
+
+
+def test_push_runs_non_interactively(tmp_path, monkeypatch):
+    """push completes to completion without requiring any interactive input."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    # stdin is closed — a truly non-interactive run must not block on it.
+    import io
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    with patch("devex.cli.push_script.run", return_value=("result\n", 0, "")):
+        code = cli.main(["push", "--agent", "claude-code"])
+    assert code == 0
