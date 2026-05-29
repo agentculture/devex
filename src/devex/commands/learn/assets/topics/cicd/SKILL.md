@@ -101,3 +101,5 @@ arrives. This is exactly how steward's `cicd` workflow handles its
 Every comment gets a reply — no silent fixes. Always include a
 `thread_id` so the thread closes automatically. Reference the fix-up
 commit SHA in the reply body where relevant.
+
+{{ footer }}

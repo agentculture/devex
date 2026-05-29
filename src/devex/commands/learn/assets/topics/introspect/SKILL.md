@@ -39,3 +39,5 @@ Invoke `/introspect` (or equivalent) in your runtime. Read the output, apply one
 ## Why one suggestion at a time
 
 Agents that shove 10 recommendations into one turn overwhelm the user. The skill you just built is explicitly capped at two — if you want more later, iterate.
+
+{{ footer }}

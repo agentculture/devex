@@ -29,3 +29,5 @@ Write the file shown below to the path noted above its fence. This skill reads t
 Use your runtime normally for a few turns. Then invoke `/levelup` to see what the skill suggests.
 
 See also: `devex learn gamify --agent {{ backend }}` (bundles the full setup).
+
+{{ footer }}
