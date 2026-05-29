@@ -1,0 +1,7 @@
+hints:
+  # Footer shown after the push when the current branch has NO open PR.
+  no_pr_notice: "no PR on this branch — open one with `{{ prog }} pr open`."
+
+  # Optional trailing hint appended after the managed (wait + delta) briefing.
+  # Points to the next triage step once the PR readiness loop completes.
+  post_wait: "Triage review threads or fix CI, then push fixes and rerun `{{ prog }} pr await`."
