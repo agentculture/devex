@@ -1,0 +1,3 @@
+hints:
+  hook_read_has_events: "Act on the tracked events above, or keep working — they accrue automatically. Run `{{ prog }} hook read --agent {{ backend }}` again to refresh."
+  hook_read_empty: "No events tracked yet — they accrue as the agent works. Run `{{ prog }} overview --agent {{ backend }}` to orient."
