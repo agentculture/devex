@@ -1,0 +1,19 @@
+# Neutral (backend-agnostic) footer hints for devex commands that are
+# invoked WITHOUT --agent (e.g. `devex explain`, `devex doctor`).
+#
+# Structure: every key is a rule_key string; the value is a Jinja template
+# string that may reference {{ prog }} (resolved from sys.argv[0]) and any
+# context dict keys the caller injects.
+#
+# Keys in this file:
+#
+#   example_placeholder   – seed key used by tests; downstream tasks (t3+)
+#                           will add the real explain/doctor neutral hints.
+#
+# When adding a new key, document it here and add a unit test in
+# tests/core/test_footer.py.
+
+hints:
+  # Placeholder — proves the neutral path is wired end-to-end.
+  # Real keys for explain/doctor will be added in t3.
+  example_placeholder: "Run `{{ prog }} explain <topic>` to learn more, or `{{ prog }} --help` for all commands."
