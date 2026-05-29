@@ -12,7 +12,7 @@ Seven verbs, in roughly the order an agent uses them on a PR:
 |---|---|
 | `agex pr lint` | Portability + alignment-trigger lint on the working diff. |
 | `agex pr open --title T [--body-file F] [--draft] [--delayed-read]` | `gh pr create` with auto-signed body; with `--delayed-read` chains to `read --wait 180`. |
-| `agex pr read [<PR>] [--wait SECS]` | Unified briefing: CI checks, SonarCloud quality gate, all comments, reviewer readiness. With `--wait`, polls until required reviewers are ready or timeout. Always exits 0. |
+| `agex pr read [<PR>] [--wait SECS]` | Unified briefing: CI checks, SonarCloud quality gate + new issues + `TO_REVIEW` security hotspots, Cloudflare Pages deploy-preview URL, all comments, a Total/Resolved/Unresolved review-thread tally, and reviewer readiness. With `--wait`, polls until required reviewers are ready or timeout. Always exits 0. |
 | `agex pr reply <PR>` | Read JSONL replies on stdin, post each, resolve threads. |
 | `agex pr review [<PR>]` | Post the Qodo agentic-review trigger (`/agentic_review`) on a PR. Re-triggers on an already-open PR; `pr open` posts it automatically for a new non-draft PR. |
 | `agex pr await [<PR>] [--max-wait SECS]` | "Wake me when this is triage-able" — polls readiness, runs CI + Sonar gate, dumps briefing. **Exits 1 on quality-gate `ERROR`, unresolved threads, or failing CI checks**, 0 on clean state or timeout. Default `--max-wait 1800` (30 min). |
@@ -61,15 +61,29 @@ a future Qodo rename is a one-line change for every consumer of `agex pr`.
 
 ## SonarCloud project key
 
-`pr read` and `pr await` query the SonarCloud quality gate for the current
-PR. The project key is resolved in order:
+`pr read` and `pr await` query the SonarCloud quality gate, new-code issues, and
+`TO_REVIEW` security hotspots for the current PR. The project key is resolved in
+order:
 
 1. `SONAR_PROJECT_KEY` env var (override for non-standard naming).
 2. `[pr] sonar_project_key` in `.agex/config.toml`.
 3. `<owner>_<repo>` (SonarCloud GitHub-import default).
 
 When the project isn't on SonarCloud the API 404s and agex silently
-skips the section, so the verbs stay safe for non-Sonar repos.
+skips the section, so the verbs stay safe for non-Sonar repos. A non-zero
+`TO_REVIEW` hotspot count is surfaced alongside the new-issue tally; both are
+omitted when empty.
+
+## Deploy-preview URL and review-thread tally
+
+Two more net-additive briefing lines, both safe on repos that don't have them:
+
+- **Deploy preview** — when a bot posts a Cloudflare Pages `*.pages.dev` link in a
+  PR comment, the first such URL is lifted into the briefing header. Skipped when
+  no `*.pages.dev` URL is present (non-Cloudflare repos).
+- **Review threads** — a `Total / Resolved / Unresolved` tally under Readiness.
+  The unresolved count is the same one that drives the "Next step:" footer and the
+  `await` gate; the line is omitted when the PR has no review threads.
 
 Every command ends with a `**Next step:**` footer — chase the chain without guessing.
 

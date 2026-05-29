@@ -24,6 +24,7 @@ def _setup_clean(monkeypatch, *, comments=None, checks=None):
     monkeypatch.setattr(github, "pr_comments", lambda pr: comments or [])
     monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: None)
     monkeypatch.setattr(github, "sonar_new_issues", lambda *a, **k: [])
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
     # Avoid network round-trip in _project_key derivation:
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
@@ -54,6 +55,69 @@ def test_pr_read_renders_skipped_gate_on_transient_failure(monkeypatch, tmp_path
     assert code == 0, captured.out + captured.err
     assert "SKIPPED" in captured.out
     assert "SonarCloud unreachable" in captured.out
+
+
+def test_pr_read_renders_hotspots_count(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    _setup_clean(monkeypatch)
+    monkeypatch.setattr(
+        github, "sonar_quality_gate", lambda *a, **k: {"projectStatus": {"status": "OK"}}
+    )
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [{"key": "h1"}, {"key": "h2"}])
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "2 security hotspot(s) to review." in captured.out
+
+
+def test_pr_read_renders_deploy_preview(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    _setup_clean(
+        monkeypatch,
+        comments=[
+            {
+                "type": "top-level",
+                "id": 9,
+                "author": "cloudflare-pages[bot]",
+                "body": "Preview: [Visit Preview](https://abc123.devex.pages.dev)",
+            }
+        ],
+    )
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "Deploy preview: https://abc123.devex.pages.dev" in captured.out
+
+
+def test_pr_read_renders_thread_tally(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    _setup_clean(monkeypatch)
+    monkeypatch.setattr(
+        github,
+        "pr_review_threads",
+        lambda pr: [
+            {"id": "T1", "isResolved": False},
+            {"id": "T2", "isResolved": False},
+            {"id": "T3", "isResolved": True},
+        ],
+    )
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "Review threads: **3** total · 1 resolved · 2 unresolved" in captured.out
+
+
+def test_pr_read_skips_new_sections_when_absent(monkeypatch, tmp_path, capsys):
+    """Hotspots, deploy-preview, and thread-tally lines vanish cleanly on a
+    non-Sonar / non-CF / no-thread PR (issue #52 graceful-skip contract)."""
+    monkeypatch.chdir(tmp_path)
+    _setup_clean(monkeypatch)
+    code = cli.main(["pr", "read", "42", "--agent", "claude-code"])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "security hotspot" not in captured.out
+    assert "Deploy preview" not in captured.out
+    assert "Review threads:" not in captured.out
 
 
 def test_pr_read_with_failing_check(monkeypatch, tmp_path, capsys):
@@ -182,6 +246,7 @@ def test_pr_read_wait_returns_when_ready(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(github, "pr_comments", comments_call)
     monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: None)
     monkeypatch.setattr(github, "sonar_new_issues", lambda *a, **k: [])
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
 
@@ -230,6 +295,7 @@ def test_pr_read_wait_satisfied_on_entry(monkeypatch, tmp_path, capsys):
     )
     monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: None)
     monkeypatch.setattr(github, "sonar_new_issues", lambda *a, **k: [])
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
 
@@ -265,6 +331,7 @@ def test_pr_read_wait_timeout_renders_still_waiting(monkeypatch, tmp_path, capsy
     monkeypatch.setattr(github, "pr_comments", lambda pr: [])  # never ready
     monkeypatch.setattr(github, "sonar_quality_gate", lambda *a, **k: None)
     monkeypatch.setattr(github, "sonar_new_issues", lambda *a, **k: [])
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
     from agent_experience.commands.pr.scripts import read as read_script
@@ -307,6 +374,7 @@ def test_sonar_project_key_env_override(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(github, "pr_comments", lambda pr: [])
     monkeypatch.setattr(github, "sonar_quality_gate", _gate)
     monkeypatch.setattr(github, "sonar_new_issues", _issues)
+    monkeypatch.setattr(github, "sonar_hotspots", lambda *a, **k: [])
     monkeypatch.setattr(github, "pr_review_threads", lambda pr: [])
     # _repo_slug must NOT win when the env override is present.
     monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")

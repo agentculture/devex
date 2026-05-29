@@ -3,7 +3,12 @@
 {% if pr_meta -%}
 - State: **{{ pr_meta.state }}** ({{ pr_meta.title }})
 - Branch: `{{ pr_meta.headRefName }}` → `{{ pr_meta.baseRefName }}`
-{% if pr_meta.url -%}- URL: {{ pr_meta.url }}{%- endif %}
+{%- if pr_meta.url %}
+- URL: {{ pr_meta.url }}
+{%- endif %}
+{%- if deploy_preview %}
+- Deploy preview: {{ deploy_preview }}
+{%- endif %}
 {%- endif %}
 
 ## CI checks
@@ -27,6 +32,9 @@ Quality gate: **{{ sonar_gate.projectStatus.status }}**{% if sonar_gate.projectS
 {% for i in sonar_issues -%}
 - `{{ i.severity }}`: {{ i.message }} ({{ i.component }}:{{ i.line or "—" }})
 {% endfor %}
+{%- endif %}
+{%- if sonar_hotspots %}
+{{ sonar_hotspots | length }} security hotspot(s) to review.
 {%- endif %}
 {%- else -%}
 _Project not on SonarCloud (skipped)._
@@ -64,6 +72,10 @@ _No Qodo review found._
 > ⚠️ Still waiting on: **{{ waiting_for | join(", ") }}**
 {%- else -%}
 All required reviewers have posted feedback.
+{%- endif %}
+{%- if threads_total > 0 %}
+
+Review threads: **{{ threads_total }}** total · {{ threads_resolved }} resolved · {{ threads_unresolved }} unresolved
 {%- endif %}
 
 {{ footer }}

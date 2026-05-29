@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-05-29
+
+### Added
+
+- `agex pr read` and `pr await` briefings now surface SonarCloud `TO_REVIEW` security hotspots (count alongside the new-issue tally), the Cloudflare Pages `*.pages.dev` deploy-preview URL in the header, and an explicit Total/Resolved/Unresolved review-thread tally under Readiness — all net-additive and skipped cleanly on non-Sonar / non-Cloudflare / no-thread PRs (#52).
+
+### Fixed
+
+- `core.github.pr_review_threads` now degrades to `[]` on a non-JSON GraphQL body (exit 0) instead of raising `JSONDecodeError`, keeping the thread tally within the graceful-skip contract so a transient blip can't crash `pr read` / `pr await` (#63 review).
+- Tightened the deploy-preview URL matcher so `.pages.dev` must terminate the host authority — rejects spoofs like `x.pages.dev.evil.com` / `x.pages.dev@evil.com` that previously matched (#63 review).
+
 ## [0.24.0] - 2026-05-28
 
 ### Added

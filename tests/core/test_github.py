@@ -206,6 +206,48 @@ def test_pr_resolve_thread_calls_graphql(monkeypatch):
     assert "resolveReviewThread" in joined
 
 
+def test_pr_review_threads_parses_nodes(monkeypatch):
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "nodes": [
+                            {"id": "T1", "isResolved": True},
+                            {"id": "T2", "isResolved": False},
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
+    monkeypatch.setattr(
+        subprocess, "run", lambda *a, **k: _FakeCompleted(stdout=json.dumps(payload), returncode=0)
+    )
+    assert github.pr_review_threads(42) == [
+        {"id": "T1", "isResolved": True},
+        {"id": "T2", "isResolved": False},
+    ]
+
+
+def test_pr_review_threads_empty_on_non_json(monkeypatch):
+    """A non-JSON body with exit code 0 must not crash callers (thread tally).
+
+    Regression for PR #63 review: pr_review_threads json.loads()'d
+    unconditionally, so a transient HTML error page raised JSONDecodeError
+    through thread_tally (which only caught RuntimeError) and crashed
+    pr read / pr await.
+    """
+    monkeypatch.setattr(github, "_repo_slug", lambda: "owner/repo")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
+    )
+    assert github.pr_review_threads(42) == []
+
+
 def test_sonar_quality_gate_returns_dict(monkeypatch):
     monkeypatch.setattr(
         subprocess,
@@ -300,3 +342,51 @@ def test_sonar_gate_skipped_sentinel_is_immutable():
         github.SONAR_GATE_SKIPPED["projectStatus"] = {}  # type: ignore[index]
     with pytest.raises(TypeError):
         github.SONAR_GATE_SKIPPED["projectStatus"]["status"] = "OK"  # type: ignore[index]
+
+
+def test_sonar_hotspots_returns_list_and_queries_to_review(monkeypatch):
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, check, env=None):
+        captured["cmd"] = cmd
+        return _FakeCompleted(
+            stdout=json.dumps({"hotspots": [{"key": "h1"}, {"key": "h2"}]}),
+            returncode=0,
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = github.sonar_hotspots("owner_repo", pr=42)
+    assert [h["key"] for h in out] == ["h1", "h2"]
+    # Lock the endpoint + params: projectKey (singular) and TO_REVIEW status.
+    endpoint = captured["cmd"][-1]
+    assert "/api/hotspots/search?" in endpoint
+    assert "projectKey=owner_repo" in endpoint
+    assert "pullRequest=42" in endpoint
+    assert "status=TO_REVIEW" in endpoint
+
+
+def test_sonar_hotspots_returns_empty_on_404(monkeypatch):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stderr="HTTP 404\n", returncode=1),
+    )
+    assert github.sonar_hotspots("missing_project", pr=42) == []
+
+
+def test_sonar_hotspots_empty_on_transient_error(monkeypatch):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stderr="HTTP 503 Service Unavailable\n", returncode=1),
+    )
+    assert github.sonar_hotspots("owner_repo", pr=42) == []
+
+
+def test_sonar_hotspots_empty_on_non_json(monkeypatch):
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **k: _FakeCompleted(stdout="<html>502 Bad Gateway</html>", returncode=0),
+    )
+    assert github.sonar_hotspots("owner_repo", pr=42) == []

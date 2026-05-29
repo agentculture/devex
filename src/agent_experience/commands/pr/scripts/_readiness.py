@@ -61,16 +61,27 @@ def is_ready(
     return (not waiting, waiting)
 
 
-def threads_unresolved(pr: int) -> int:
-    """Count of review threads on ``pr`` whose ``isResolved`` flag is false.
+def thread_tally(pr: int) -> tuple[int, int, int]:
+    """``(total, resolved, unresolved)`` review-thread counts from one
+    ``pr_review_threads`` GraphQL fetch.
 
-    Queries GitHub's GraphQL reviewThreads endpoint so threads resolved
-    via ``resolveReviewThread`` (what ``pr reply`` does) are excluded
-    from the count.  Returns 0 on any query failure so the caller stays
+    Threads resolved via ``resolveReviewThread`` (what ``pr reply`` does) count
+    as resolved.  Returns ``(0, 0, 0)`` on any query failure so the caller stays
     safe on PRs without review threads.
     """
     try:
         threads = github.pr_review_threads(pr)
     except RuntimeError:
-        return 0
-    return sum(1 for t in threads if not t.get("isResolved"))
+        return (0, 0, 0)
+    total = len(threads)
+    unresolved = sum(1 for t in threads if not t.get("isResolved"))
+    return (total, total - unresolved, unresolved)
+
+
+def threads_unresolved(pr: int) -> int:
+    """Count of review threads on ``pr`` whose ``isResolved`` flag is false.
+
+    Thin wrapper over :func:`thread_tally` (single source of truth); returns 0
+    on any query failure.
+    """
+    return thread_tally(pr)[2]

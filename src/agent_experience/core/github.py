@@ -261,7 +261,10 @@ def pr_review_threads(pr: int) -> list[dict[str, Any]]:
     """Return all review threads on a PR with their resolution state.
 
     Each item: ``{"id": <node_id>, "isResolved": <bool>}``.  Empty list
-    when the PR has no review threads.
+    when the PR has no review threads.  A non-JSON GraphQL body (e.g. an HTML
+    error page returned with exit code 0) degrades to ``[]`` — same
+    enrichment-or-skip contract as :func:`sonar_new_issues` — so a transient
+    blip never crashes ``pr read`` / ``pr await`` via the thread tally.
     """
     owner, repo = _repo_slug().split("/", 1)
     out = _run_gh(
@@ -278,7 +281,10 @@ def pr_review_threads(pr: int) -> list[dict[str, Any]]:
             f"query={_REVIEW_THREADS_QUERY}",
         ]
     )
-    data = json.loads(out)
+    try:
+        data = json.loads(out)
+    except json.JSONDecodeError:
+        return []
     nodes = (
         data.get("data", {})
         .get("repository", {})
@@ -353,3 +359,29 @@ def sonar_new_issues(project_key: str, pr: int) -> list[dict[str, Any]]:
     except json.JSONDecodeError:
         return []
     return list(data.get("issues", []))
+
+
+def sonar_hotspots(project_key: str, pr: int) -> list[dict[str, Any]]:
+    """Query SonarCloud for TO_REVIEW security hotspots in the PR.
+
+    Returns ``[]`` when the project is not registered (404) and, defensively,
+    on any other transient failure or non-JSON body — same enrichment-or-skip
+    contract as :func:`sonar_new_issues`.  Note the hotspots endpoint takes
+    ``projectKey`` (singular), unlike ``/api/issues/search``'s ``projects``.
+    """
+    args = [
+        "api",
+        *_SONAR_HOST_ARGS,
+        "-X",
+        "GET",
+        f"/api/hotspots/search?projectKey={project_key}&pullRequest={pr}&status=TO_REVIEW",
+    ]
+    try:
+        out = _run_gh(args)
+    except RuntimeError:
+        return []
+    try:
+        data = json.loads(out)
+    except json.JSONDecodeError:
+        return []
+    return list(data.get("hotspots", []))
