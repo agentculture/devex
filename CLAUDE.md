@@ -19,7 +19,7 @@ Read the spec before any non-trivial change — the design invariants below are 
 1. **Zero LLM calls inside devex.** All output is deterministic markdown from Jinja templates + Python.
 2. **Markdown is the only output format.** No `--json` flag.
 3. **`--agent <backend>` is required** on backend-sensitive commands. The CLI never auto-detects.
-4. **Side effects only in** `gamify`, `gamify --uninstall`, `hook write`, `pr open`, `pr reply`, `pr review`, `pr read` (journal writes), and first-run `.devex/` init. Everything else is read-only. The `devex pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants.
+4. **Side effects only in** `gamify`, `gamify --uninstall`, `hook write`, `pr open`, `pr reply`, `pr review`, `pr read` (journal writes), `pr await` (journal + `--detach` marker writes under `.devex/data/pr/<pr>/` and the detached poller subprocess), and first-run `.devex/` init. Everything else is read-only. The `devex pr` namespace allows scoped network I/O (via `gh`), bounded `--wait` sleep, and — for `pr await --detach` — a detached background process that pays that sleep outside the agent session; a deliberate carve-out from the no-network/no-sleep invariants.
 5. **"Unsupported" is success** — exit 0 with a markdown notice that links to the issue tracker, not a non-zero exit.
 6. **Skills are authored by the agent, not shipped by devex.** `devex learn <topic>` teaches; `devex explain <topic>` describes; devex never writes a user skill file on the agent's behalf in v0.1.
 
@@ -43,9 +43,10 @@ cli.py ──► commands/<name>/scripts/<name>.py ──► core/render.py
 
 ## `devex pr` namespace (v0.17.0+)
 
-`lint`, `open`, `read`, `reply`, `review`, `await`, `delta`. Each command ends with a deterministic "Next step:" footer. The `pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants. `pr open` (non-draft, new PR) and `pr review` post the Qodo `/agentic_review` trigger comment; the legacy `/improve` is deprecated and never emitted. The trigger string lives in one place: `commands/pr/scripts/review.QODO_REVIEW_TRIGGER`. Key modules:
+`lint`, `open`, `read`, `reply`, `review`, `await`, `delta`. Each command ends with a deterministic "Next step:" footer. The `pr` namespace allows scoped network I/O (via `gh`) and bounded `--wait` sleep — a deliberate carve-out from the no-network/no-sleep invariants. `pr open` (non-draft, new PR) and `pr review` post the Qodo `/agentic_review` trigger comment; the legacy `/improve` is deprecated and never emitted. The trigger string lives in one place: `commands/pr/scripts/review.QODO_REVIEW_TRIGGER`. `pr await --detach` / `--check` (issue #64) move the bounded poll out of the agent session: `--detach` forks a detached worker (`commands/pr/scripts/_await_worker.py`) that writes the verdict to a marker (`commands/pr/scripts/_detach.py`, atomic `os.replace`), and `--check` reads it back without sleeping. Key modules:
 
 - `core/github.py` — thin `gh` shellout wrapper; future zero-trust httpx swap touches only this file.
+- `commands/pr/scripts/_detach.py` — await-marker read/write (atomic) + the detached-subprocess spawn helper.
 - `core/journal.py` — nested-stream JSONL append/load for `.devex/data/<dir>/<stream>.jsonl`.
 - `core/backend.resolve_backend()` — `--agent` resolution with `culture.yaml` fallback.
 - `commands/pr/assets/rules/next_step_rules.py` — "Next step:" footer decision logic, per-backend phrasing under `commands/pr/assets/backends/<backend>.yaml`.

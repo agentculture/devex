@@ -64,6 +64,20 @@ def await_wait_timeout_step(pr: int, reviewers: list[str]) -> tuple[str, dict[st
     return "await_wait_timeout", {"pr": pr, "reviewers": ", ".join(reviewers)}
 
 
+def await_detach_step(pr: int) -> tuple[str, dict[str, Any]]:
+    return "await_detached", {"pr": pr}
+
+
+def await_check_step(state: str, pr: int, elapsed: int | None = None) -> tuple[str, dict[str, Any]]:
+    """Footer for `pr await --check`, keyed by marker ``state``."""
+    if state == "missing":
+        return "await_check_missing", {"pr": pr}
+    if state == "incompatible":
+        return "await_check_incompatible", {"pr": pr}
+    # Still polling.
+    return "await_check_pending", {"pr": pr, "elapsed": "?" if elapsed is None else elapsed}
+
+
 def reply_next_step(pr: int, failure_count: int) -> tuple[str, dict[str, Any]]:
     if failure_count > 0:
         return "reply_with_failures", {"pr": pr}

@@ -19,3 +19,7 @@ hints:
   await_unresolved_threads: "Triage and prepare `replies.jsonl`, then `{{ prog }} pr reply {{ pr }} < replies.jsonl`."
   await_ci_red: "Fix CI before requesting re-review (see failing checks above)."
   await_wait_timeout: "Still waiting on: {{ reviewers }}. Rerun `{{ prog }} pr await {{ pr }}` to keep waiting."
+  await_detached: "Polling #{{ pr }} in the background (no in-session wait) — run `{{ prog }} pr await {{ pr }} --check` to read the verdict when convenient."
+  await_check_pending: "Still polling (started {{ elapsed }}s ago) — re-run `{{ prog }} pr await {{ pr }} --check` shortly."
+  await_check_missing: "No detached await for #{{ pr }} — start one with `{{ prog }} pr await {{ pr }} --detach`."
+  await_check_incompatible: "Marker written by an incompatible `{{ prog }}` version — re-run `{{ prog }} pr await {{ pr }} --detach`."

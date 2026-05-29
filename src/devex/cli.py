@@ -224,9 +224,18 @@ def _cmd_pr_read(args: argparse.Namespace) -> int:
 
 def _cmd_pr_await(args: argparse.Namespace) -> int:
     try:
-        stdout, exit_code, stderr = pr_await_script.run(
-            agent=args.agent, project_dir=Path.cwd(), pr=args.pr, max_wait=args.max_wait
-        )
+        if args.check:
+            stdout, exit_code, stderr = pr_await_script.check(
+                agent=args.agent, project_dir=Path.cwd(), pr=args.pr
+            )
+        elif args.detach:
+            stdout, exit_code, stderr = pr_await_script.detach(
+                agent=args.agent, project_dir=Path.cwd(), pr=args.pr, max_wait=args.max_wait
+            )
+        else:
+            stdout, exit_code, stderr = pr_await_script.run(
+                agent=args.agent, project_dir=Path.cwd(), pr=args.pr, max_wait=args.max_wait
+            )
     except ValueError as exc:
         print(f"{prog_name()}: {exc}", file=sys.stderr)
         return 2
@@ -416,6 +425,22 @@ def _register_pr(sub: argparse._SubParsersAction) -> None:
             "Upper bound in seconds to poll for required-reviewer readiness; "
             "returns early (down to waited=0s) once satisfied (default 1800)."
         ),
+    )
+    detach_group = p_await.add_mutually_exclusive_group()
+    detach_group.add_argument(
+        "--detach",
+        action="store_true",
+        default=False,
+        help=(
+            "Fork a background poller that writes the verdict to a marker and "
+            "return immediately (no in-session sleep). Read it later with --check."
+        ),
+    )
+    detach_group.add_argument(
+        "--check",
+        action="store_true",
+        default=False,
+        help="Read a --detach run's marker without sleeping; print the verdict (or still-polling).",
     )
     _add_agent_option(p_await, required=False, help_text=_AGENT_HELP)
     p_await.set_defaults(func=_cmd_pr_await)

@@ -15,7 +15,7 @@ Seven verbs, in roughly the order an agent uses them on a PR:
 | `devex pr read [<PR>] [--wait SECS]` | Unified briefing: CI checks, SonarCloud quality gate + new issues + `TO_REVIEW` security hotspots, Cloudflare Pages deploy-preview URL, all comments, a Total/Resolved/Unresolved review-thread tally, and reviewer readiness. With `--wait`, polls until required reviewers are ready or timeout. Always exits 0. |
 | `devex pr reply <PR>` | Read JSONL replies on stdin, post each, resolve threads. |
 | `devex pr review [<PR>]` | Post the Qodo agentic-review trigger (`/agentic_review`) on a PR. Re-triggers on an already-open PR; `pr open` posts it automatically for a new non-draft PR. |
-| `devex pr await [<PR>] [--max-wait SECS]` | "Wake me when this is triage-able" — polls readiness, runs CI + Sonar gate, dumps briefing. **Exits 1 on quality-gate `ERROR`, unresolved threads, or failing CI checks**, 0 on clean state or timeout. Default `--max-wait 1800` (30 min). |
+| `devex pr await [<PR>] [--max-wait SECS] [--detach \| --check]` | "Wake me when this is triage-able" — polls readiness, runs CI + Sonar gate, dumps briefing. **Exits 1 on quality-gate `ERROR`, unresolved threads, or failing CI checks**, 0 on clean state or timeout. Default `--max-wait 1800` (30 min). `--detach` pays the wait in a background process and returns immediately; `--check` reads that verdict back without sleeping. |
 | `devex pr delta` | Dump sibling-project `CLAUDE.md` heads + `culture.yaml` for alignment review. |
 
 `pr read --wait` and `pr await` share the same readiness-polling loop; the
@@ -40,6 +40,27 @@ PR health (e.g., in scripts that should fail if Sonar errors).
 - **Need merge-gating?** Use `devex pr await`, which adds the CI + Sonar + thread
   gates on top of the same readiness loop and **exits non-zero** when the PR
   isn't clean.
+
+## Non-blocking await (`--detach` / `--check`)
+
+The plain `pr await` (and `read --wait`) **sleep in your session** while polling.
+Past the ~5-min prompt-cache TTL that re-reads your whole context uncached on
+every wake — a real tax right after `pr open`. The detached pair moves the wait
+out of your session entirely:
+
+- **`devex pr await <PR> --detach`** forks a background poller that runs the same
+  readiness → CI → Sonar-gate → thread-tally logic, writes the verdict to a
+  marker (`.devex/data/pr/<PR>/await.json`), and **returns immediately** — no
+  in-session sleep. Fire it right after `pr open`, then do other work.
+- **`devex pr await <PR> --check`** reads that marker back without sleeping or
+  re-polling. When the poller has finished it prints the same briefing and
+  returns the same non-zero-on-blocked exit code; while it's still running it
+  reports "still polling (started Ns ago)" and exits 0; if no detached run
+  exists it says so (exit 0). It never crashes or reports a false "clean".
+
+`--detach` and `--check` are mutually exclusive. Stays deterministic and
+LLM-free; the background process is the only thing that sleeps, and it always
+leaves a marker — even if `gh` fails — so `--check` is never left hanging.
 
 ## Qodo agentic review
 
