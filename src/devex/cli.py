@@ -177,6 +177,7 @@ def _cmd_pr_open(args: argparse.Namespace) -> int:
             body_file=args.body_file,
             draft=args.draft,
             delayed_read=args.delayed_read,
+            detached_await=args.detached_await,
         )
     except ValueError as exc:
         print(f"{prog_name()}: {exc}", file=sys.stderr)
@@ -381,11 +382,18 @@ def _register_pr(sub: argparse._SubParsersAction) -> None:
     p_open.add_argument("--body-file", type=Path, default=None)
     p_open.add_argument("--draft", action="store_true", default=False)
     _add_agent_option(p_open, required=False, help_text=_AGENT_HELP)
-    p_open.add_argument(
+    open_wait_group = p_open.add_mutually_exclusive_group()
+    open_wait_group.add_argument(
         "--delayed-read",
         action="store_true",
         default=False,
-        help="After create, immediately run `pr read --wait 180`.",
+        help="After create, immediately run `pr read --wait 180` (blocks this session).",
+    )
+    open_wait_group.add_argument(
+        "--detached-await",
+        action="store_true",
+        default=False,
+        help="After create, fork a detached `pr await` poller; return now (read with --check).",
     )
     p_open.set_defaults(func=_cmd_pr_open)
 

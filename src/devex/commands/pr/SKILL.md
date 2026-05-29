@@ -11,7 +11,7 @@ Seven verbs, in roughly the order an agent uses them on a PR:
 | Verb | Purpose |
 |---|---|
 | `devex pr lint` | Portability + alignment-trigger lint on the working diff. |
-| `devex pr open --title T [--body-file F] [--draft] [--delayed-read]` | `gh pr create` with auto-signed body; with `--delayed-read` chains to `read --wait 180`. |
+| `devex pr open --title T [--body-file F] [--draft] [--delayed-read \| --detached-await]` | `gh pr create` with auto-signed body. `--delayed-read` chains to a blocking `read --wait 180`; `--detached-await` instead forks a detached `pr await` poller and returns immediately (read it later with `pr await <PR> --check`). |
 | `devex pr read [<PR>] [--wait SECS]` | Unified briefing: CI checks, SonarCloud quality gate + new issues + `TO_REVIEW` security hotspots, Cloudflare Pages deploy-preview URL, all comments, a Total/Resolved/Unresolved review-thread tally, and reviewer readiness. With `--wait`, polls until required reviewers are ready or timeout. Always exits 0. |
 | `devex pr reply <PR>` | Read JSONL replies on stdin, post each, resolve threads. |
 | `devex pr review [<PR>]` | Post the Qodo agentic-review trigger (`/agentic_review`) on a PR. Re-triggers on an already-open PR; `pr open` posts it automatically for a new non-draft PR. |
@@ -60,7 +60,14 @@ out of your session entirely:
 
 `--detach` and `--check` are mutually exclusive. Stays deterministic and
 LLM-free; the background process is the only thing that sleeps, and it always
-leaves a marker — even if `gh` fails — so `--check` is never left hanging.
+leaves a marker — even if `gh` fails **or the spawn itself fails** — so `--check`
+is never left hanging.
+
+**Auto-wait at open time.** `devex pr open --detached-await` fires this detached
+poll automatically right after creating the PR (and posting the Qodo trigger),
+so the "open → walk away → `--check` the verdict" loop is a single command — the
+non-blocking counterpart to `--delayed-read`. The two open flags are mutually
+exclusive.
 
 ## Qodo agentic review
 

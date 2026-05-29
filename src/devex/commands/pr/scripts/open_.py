@@ -37,6 +37,7 @@ def run(
     body_file: Path | None,
     draft: bool,
     delayed_read: bool = False,
+    detached_await: bool = False,
 ) -> tuple[str, int, str]:
     backend = resolve_backend(agent, project_dir)
     nick = github.resolve_nick(project_dir)
@@ -94,6 +95,17 @@ def run(
         },
     )
 
+    if detached_await and not was_already_open:
+        # Non-blocking sibling of --delayed-read: fork a detached poller that
+        # gathers the verdict (readiness → CI → Sonar → threads) in the
+        # background, and return immediately. Read it later with `pr await
+        # <PR> --check` — no in-session sleep waiting for reviewers.
+        from devex.commands.pr.scripts import await_ as await_script
+
+        det_stdout, det_exit, _ = await_script.detach(
+            agent=agent, project_dir=project_dir, pr=pr, max_wait=1800
+        )
+        return stdout + "\n" + det_stdout, det_exit, ""
     if delayed_read and not was_already_open:
         from devex.commands.pr.scripts import read as read_script
 

@@ -102,6 +102,30 @@ def test_detach_spawns_worker_writes_polling_marker_and_returns_immediately(
     assert str(_detach.marker_path(42)) in out
 
 
+def test_detach_spawn_failure_finalizes_marker_as_error(monkeypatch, tmp_path, capsys):
+    """If the spawn raises, the polling marker must be finalized as error —
+    never left stranded in 'polling' (Qodo #65 reliability finding)."""
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(*a, **k):
+        raise OSError("cannot fork")
+
+    monkeypatch.setattr(_detach, "_spawn_detached", _boom)
+    code = cli.main(["pr", "await", "42", "--detach", "--agent", "claude-code"])
+    out = capsys.readouterr().out
+    assert code == 1
+    marker = _detach.read_marker(42)
+    assert marker["state"] == "done"
+    assert marker["outcome"] == "error"
+    assert marker["exit_code"] == 1
+    assert "cannot fork" in out
+    assert any(e["type"] == "pr_await_detach_spawn_error" for e in _journal.load())
+
+    # A follow-up --check now surfaces the error, not an eternal "still polling".
+    code2 = cli.main(["pr", "await", "42", "--check", "--agent", "claude-code"])
+    assert code2 == 1
+
+
 def test_detach_resolves_pr_before_spawning(monkeypatch, tmp_path):
     """No PR (and none on the branch) → exit 2 before any spawn."""
     monkeypatch.chdir(tmp_path)

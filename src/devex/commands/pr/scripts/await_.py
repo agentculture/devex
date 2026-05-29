@@ -261,7 +261,38 @@ def detach(
             "backend": backend.value,
         },
     )
-    _detach.spawn_worker(pr_number, max_wait, backend.value, prog_name(), project_dir)
+    try:
+        _detach.spawn_worker(pr_number, max_wait, backend.value, prog_name(), project_dir)
+    except Exception as exc:  # noqa: BLE001 — never strand the polling marker
+        # The polling marker is already on disk; if the spawn fails there is no
+        # worker to finalize it, so it would sit in "polling" forever and
+        # `--check` would report "still polling" indefinitely. Finalize it as an
+        # error here so `--check` surfaces the failure deterministically.
+        briefing = (
+            f"# PR #{pr_number} — detached await failed to start\n\n"
+            f"Could not spawn the background poller: `{exc}`\n\n"
+            f"See `{_detach.worker_log_path(pr_number)}` for details.\n\n"
+            f"---\n**Next step:** rerun `{prog_name()} pr await {pr_number} --detach` "
+            "once the cause is resolved.\n"
+        )
+        _detach.write_marker(
+            pr_number,
+            {
+                "schema": _detach.MARKER_SCHEMA,
+                "state": "done",
+                "pr": pr_number,
+                "exit_code": 1,
+                "outcome": "error",
+                "started_at": started_at,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "briefing": briefing,
+                "gate_status": None,
+                "threads_unresolved": 0,
+                "ci_state": "unknown",
+            },
+        )
+        _journal.append({"type": "pr_await_detach_spawn_error", "pr": pr_number, "error": str(exc)})
+        return briefing, 1, ""
     _journal.append({"type": "pr_await_detach_spawned", "pr": pr_number, "max_wait": max_wait})
 
     marker = _detach.marker_path(pr_number)

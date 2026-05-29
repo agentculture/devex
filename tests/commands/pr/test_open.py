@@ -213,6 +213,65 @@ def test_pr_open_survives_trigger_post_failure(monkeypatch, tmp_path, capsys):
     assert "Posted `/agentic_review`" not in out.out
 
 
+def test_pr_open_detached_await_spawns_and_returns_now(monkeypatch, tmp_path, capsys):
+    """`--detached-await` forks a detached poller and returns immediately —
+    the non-blocking sibling of --delayed-read (auto-wait for comments)."""
+    from devex.commands.pr.scripts import _detach
+
+    monkeypatch.chdir(tmp_path)
+    _patch(monkeypatch, view_returns=None)
+    spawned = {}
+
+    def fake_spawn(argv, cwd, *, log_path):
+        spawned["argv"] = argv
+        return 999
+
+    monkeypatch.setattr(_detach, "_spawn_detached", fake_spawn)
+    body_file = tmp_path / "body.md"
+    body_file.write_text("b\n", encoding="utf-8")
+    code = cli.main(
+        [
+            "pr",
+            "open",
+            "--agent",
+            "claude-code",
+            "--title",
+            "t",
+            "--body-file",
+            str(body_file),
+            "--detached-await",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "PR opened" in out  # open result still rendered first
+    assert "detached await started" in out.lower()
+    assert "--check" in out
+    marker = _detach.read_marker(42)
+    assert marker is not None and marker["state"] == "polling"
+    assert spawned["argv"][2] == "devex.commands.pr.scripts._await_worker"
+
+
+def test_pr_open_delayed_read_and_detached_await_mutually_exclusive(monkeypatch, tmp_path):
+    import pytest
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        cli.main(
+            [
+                "pr",
+                "open",
+                "--agent",
+                "claude-code",
+                "--title",
+                "t",
+                "--delayed-read",
+                "--detached-await",
+            ]
+        )
+    assert exc.value.code == 2
+
+
 def test_pr_open_with_delayed_read_chains(monkeypatch, tmp_path, capsys):
     monkeypatch.chdir(tmp_path)
     _patch(monkeypatch, view_returns=None)
